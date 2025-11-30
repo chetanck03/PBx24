@@ -1,17 +1,22 @@
 import express from 'express';
 import {
   placeBid,
-  getListingBids,
+  getAuctionBids,
   getUserBids,
-  selectWinningBid
+  acceptBid,
+  getSellerAuctionBids
 } from '../controllers/bidController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
-router.post('/', authenticateToken, placeBid);
-router.get('/my-bids', authenticateToken, getUserBids);
-router.get('/listing/:listingId', getListingBids);
-router.put('/:bidId/select', authenticateToken, selectWinningBid);
+// Public routes (anyone can view bids)
+router.get('/auction/:auctionId', getAuctionBids);
+
+// Authenticated routes
+router.post('/', requireAuth, placeBid);
+router.get('/my-bids', requireAuth, getUserBids);
+router.get('/seller/auction/:auctionId', requireAuth, getSellerAuctionBids);
+router.post('/:bidId/accept', requireAuth, acceptBid);
 
 export default router;

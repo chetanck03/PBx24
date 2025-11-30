@@ -1,204 +1,440 @@
 import Bid from '../models/Bid.js';
-import Listing from '../models/Listing.js';
-import Transaction from '../models/Transaction.js';
-import Notification from '../models/Notification.js';
+import Auction from '../models/Auction.js';
+import Phone from '../models/Phone.js';
+import User from '../models/User.js';
+import { sendBidAcceptanceEmail } from '../services/emailService.js';
 
-// Place a bid
+/**
+ * Place a bid on an auction
+ */
 export const placeBid = async (req, res) => {
   try {
-    const { listingId, amount } = req.body;
-
-    const listing = await Listing.findById(listingId);
-    if (!listing) {
+    console.log('=== PLACE BID REQUEST ===');
+    console.log('User ID:', req.userId);
+    console.log('Body:', req.body);
+    
+    const { auctionId, bidAmount } = req.body;
+    
+    if (!auctionId || !bidAmount) {
+      console.log('Missing fields');
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Auction ID and bid amount are required',
+          code: 'MISSING_FIELDS'
+        }
+      });
+    }
+    
+    // Get auction
+    const auction = await Auction.findById(auctionId).populate('phoneId');
+    if (!auction) {
       return res.status(404).json({
         success: false,
-        error: { message: 'Listing not found' }
+        error: {
+          message: 'Auction not found',
+          code: 'AUCTION_NOT_FOUND'
+        }
       });
     }
-
-    // Check if auction is still active
-    if (listing.status !== 'active' || new Date() > listing.auctionEndTime) {
+    
+    // Check if auction is active
+    if (auction.status !== 'active') {
       return res.status(400).json({
         success: false,
-        error: { message: 'Auction has ended' }
+        error: {
+          message: 'Auction is not active',
+          code: 'AUCTION_NOT_ACTIVE'
+        }
       });
     }
-
+    
+    // Check if auction has ended
+    if (new Date() > auction.auctionEndTime) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Auction has ended',
+          code: 'AUCTION_ENDED'
+        }
+      });
+    }
+    
     // Check if user is not the seller
-    if (listing.seller.toString() === req.user._id.toString()) {
+    const phone = auction.phoneId;
+    console.log('Phone seller ID:', phone.sellerId.toString());
+    console.log('Current user ID:', req.userId);
+    console.log('Is same user?', phone.sellerId.toString() === req.userId);
+    
+    if (phone.sellerId.toString() === req.userId) {
+      console.log('User trying to bid on own listing');
       return res.status(400).json({
         success: false,
-        error: { message: 'Cannot bid on your own listing' }
+        error: {
+          message: 'Cannot bid on your own listing',
+          code: 'CANNOT_BID_OWN'
+        }
       });
     }
-
-    // Check if bid amount is higher than current highest bid
-    const minBidAmount = Math.max(listing.currentHighestBid, listing.startingPrice) + 1;
-    if (amount < minBidAmount) {
+    
+    // Check if bid is higher than current bid
+    const minBidAmount = Math.max(auction.currentBid, phone.minBidPrice);
+    console.log('Min bid amount:', minBidAmount);
+    console.log('User bid amount:', bidAmount);
+    console.log('Is bid high enough?', bidAmount > minBidAmount);
+    
+    if (bidAmount <= minBidAmount) {
+      console.log('Bid too low');
       return res.status(400).json({
         success: false,
-        error: { message: `Bid must be at least $${minBidAmount}` }
+        error: {
+          message: `Bid must be higher than ₹${minBidAmount}`,
+          code: 'BID_TOO_LOW'
+        }
       });
     }
-
-    // Update previous winning bid status
+    
+    // Get bidder info
+    let bidder = await User.findById(req.userId);
+    if (!bidder) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Ensure user has an anonymousId (for users created before this field was added)
+    if (!bidder.anonymousId) {
+      console.log('User missing anonymousId, generating one...');
+      // The pre-save hook will generate it
+      await bidder.save();
+      // Reload the user to get the generated anonymousId
+      bidder = await User.findById(req.userId);
+      console.log('Generated anonymousId:', bidder.anonymousId);
+    }
+    
+    console.log('Using anonymousBidderId:', bidder.anonymousId);
+    
+    // Update previous winning bids
     await Bid.updateMany(
-      { listing: listingId, isWinning: true },
-      { isWinning: false, status: 'outbid' }
+      { auctionId, isWinning: true },
+      { isWinning: false }
     );
-
+    
     // Create new bid
     const bid = new Bid({
-      listing: listingId,
-      bidder: req.user._id,
-      amount,
+      auctionId,
+      bidAmount,
       isWinning: true,
-      status: 'winning'
+      anonymousBidderId: bidder.anonymousId // Use user's existing anonymous ID
     });
-
+    
+    // Encrypt bidder ID
+    bid.setBidder(req.userId);
+    
+    console.log('Saving bid...');
     await bid.save();
-
-    // Update listing's current highest bid
-    listing.currentHighestBid = amount;
-    await listing.save();
-
-    await bid.populate('bidder', 'name avatar');
-
-    // Create notifications (implement socket.io later)
-    // Notify seller about new bid
-    const sellerNotification = new Notification({
-      recipient: listing.seller,
-      type: 'new_bid',
-      title: 'New Bid Received',
-      message: `${req.user.name} placed a bid of $${amount} on your listing`,
-      relatedListing: listingId,
-      relatedBid: bid._id
-    });
-    await sellerNotification.save();
-
+    console.log('Bid saved successfully');
+    
+    // Update auction
+    auction.updateBid(bidAmount, req.userId, bid.anonymousBidderId);
+    await auction.save();
+    
+    console.log('Bid placed successfully!');
+    console.log('=== END PLACE BID ===');
+    
     res.status(201).json({
       success: true,
-      data: { bid }
+      data: bid.toSelfObject(),
+      message: 'Bid placed successfully'
     });
   } catch (error) {
-    console.error('Place bid error:', error);
+    console.error('=== BID ERROR ===');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    // Write to log file for debugging
+    const fs = require('fs');
+    const logMessage = `
+=== BID ERROR ${new Date().toISOString()} ===
+User ID: ${req.userId}
+Error: ${error.message}
+Stack: ${error.stack}
+=====================================
+`;
+    fs.appendFileSync('bid-errors.log', logMessage);
+    
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to place bid' }
+      error: {
+        message: 'Error placing bid',
+        code: 'BID_ERROR',
+        details: error.message
+      }
     });
   }
 };
 
-// Get bids for a listing
-export const getListingBids = async (req, res) => {
+/**
+ * Get bids for an auction
+ */
+export const getAuctionBids = async (req, res) => {
   try {
-    const bids = await Bid.find({ listing: req.params.listingId })
-      .populate('bidder', 'name avatar')
-      .sort({ amount: -1 });
-
+    const { auctionId } = req.params;
+    const bids = await Bid.find({ auctionId }).sort({ bidAmount: -1 });
+    
+    // Return appropriate view based on role (handle non-authenticated users)
+    const bidsData = bids.map(bid => {
+      if (req.userRole === 'admin') {
+        return bid.toAdminObject();
+      } else if (req.userId && bid.getBidderId() === req.userId) {
+        return bid.toSelfObject();
+      } else {
+        return bid.toPublicObject();
+      }
+    });
+    
     res.json({
       success: true,
-      data: { bids }
+      data: bidsData,
+      count: bidsData.length
     });
   } catch (error) {
-    console.error('Get listing bids error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to fetch bids' }
+      error: {
+        message: 'Error fetching bids',
+        code: 'FETCH_ERROR'
+      }
     });
   }
 };
 
-// Get user's bids
+/**
+ * Get user's bids
+ */
 export const getUserBids = async (req, res) => {
   try {
-    const bids = await Bid.find({ bidder: req.user._id })
-      .populate('listing', 'title brand model images status auctionEndTime')
-      .sort({ createdAt: -1 });
-
+    // Find all bids where the encrypted bidderId matches the user
+    const allBids = await Bid.find({}).populate('auctionId');
+    
+    // Filter bids that belong to this user (decrypt and compare)
+    const userBids = allBids.filter(bid => {
+      const decryptedBidderId = bid.getBidderId();
+      return decryptedBidderId === req.userId;
+    });
+    
+    const bidsData = userBids.map(bid => bid.toSelfObject());
+    
     res.json({
       success: true,
-      data: { bids }
+      data: bidsData,
+      count: bidsData.length
     });
   } catch (error) {
-    console.error('Get user bids error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to fetch user bids' }
+      error: {
+        message: 'Error fetching user bids',
+        code: 'FETCH_ERROR'
+      }
     });
   }
 };
 
-// Select winning bid (seller only)
-export const selectWinningBid = async (req, res) => {
+/**
+ * Accept a bid (Seller can end auction early by accepting a bid)
+ */
+export const acceptBid = async (req, res) => {
   try {
     const { bidId } = req.params;
-
-    const bid = await Bid.findById(bidId).populate('listing');
+    
+    const bid = await Bid.findById(bidId).populate('auctionId');
     if (!bid) {
       return res.status(404).json({
         success: false,
-        error: { message: 'Bid not found' }
+        error: {
+          message: 'Bid not found',
+          code: 'BID_NOT_FOUND'
+        }
       });
     }
-
-    const listing = bid.listing;
-
+    
+    const auction = bid.auctionId;
+    if (!auction) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Auction not found',
+          code: 'AUCTION_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Get phone and verify seller
+    const phone = await Phone.findById(auction.phoneId);
+    if (!phone) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Phone not found',
+          code: 'PHONE_NOT_FOUND'
+        }
+      });
+    }
+    
     // Check if user is the seller
-    if (listing.seller.toString() !== req.user._id.toString()) {
+    if (phone.sellerId.toString() !== req.userId && req.userRole !== 'admin') {
       return res.status(403).json({
         success: false,
-        error: { message: 'Only the seller can select winning bid' }
+        error: {
+          message: 'Only the seller can accept bids',
+          code: 'NOT_SELLER'
+        }
       });
     }
-
-    // Check if listing is still active
-    if (listing.status !== 'active') {
+    
+    // Check if auction is still active
+    if (auction.status !== 'active') {
       return res.status(400).json({
         success: false,
-        error: { message: 'Listing is no longer active' }
+        error: {
+          message: 'Auction is not active',
+          code: 'AUCTION_NOT_ACTIVE'
+        }
       });
     }
-
-    // Update bid status
-    bid.isSelected = true;
-    bid.status = 'selected';
-    await bid.save();
-
-    // Update listing status
-    listing.status = 'sold';
-    await listing.save();
-
-    // Create transaction
-    const transaction = new Transaction({
-      listing: listing._id,
-      seller: listing.seller,
-      buyer: bid.bidder,
-      winningBid: bid._id,
-      amount: bid.amount
-    });
-    await transaction.save();
-
-    // Create notification for buyer
-    const buyerNotification = new Notification({
-      recipient: bid.bidder,
-      type: 'bid_selected',
-      title: 'Congratulations! Your bid was selected',
-      message: `Your bid of $${bid.amount} was selected for ${listing.title}`,
-      relatedListing: listing._id,
-      relatedBid: bid._id
-    });
-    await buyerNotification.save();
-
+    
+    // Get winner details
+    const winnerId = bid.getBidderId();
+    const winner = await User.findById(winnerId);
+    
+    // End auction and set winner
+    auction.status = 'ended';
+    auction.setWinner(winnerId);
+    await auction.save();
+    
+    // Update phone status
+    phone.status = 'sold';
+    await phone.save();
+    
+    // Mark all other bids as not winning
+    await Bid.updateMany(
+      { auctionId: auction._id, _id: { $ne: bidId } },
+      { isWinning: false }
+    );
+    
+    // Send email notification to winner
+    if (winner && winner.email) {
+      try {
+        const phoneDetails = {
+          brand: phone.brand,
+          model: phone.model,
+          storage: phone.storage,
+          condition: phone.condition
+        };
+        
+        await sendBidAcceptanceEmail(
+          winner.email,
+          winner.name,
+          phoneDetails,
+          bid.bidAmount
+        );
+        
+        console.log(`✅ Bid acceptance email sent to ${winner.email}`);
+      } catch (emailError) {
+        console.error('Failed to send bid acceptance email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+    
     res.json({
       success: true,
-      data: { bid, transaction }
+      message: 'Bid accepted successfully. Auction ended. Winner has been notified via email.',
+      data: {
+        auction: auction.toPublicObject(),
+        winningBid: bid.toPublicObject()
+      }
     });
   } catch (error) {
-    console.error('Select winning bid error:', error);
+    console.error('Error accepting bid:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to select winning bid' }
+      error: {
+        message: 'Error accepting bid',
+        code: 'ACCEPT_ERROR',
+        details: error.message
+      }
     });
   }
+};
+
+/**
+ * Get bids for seller's auction
+ */
+export const getSellerAuctionBids = async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    
+    // Get auction and verify seller
+    const auction = await Auction.findById(auctionId).populate('phoneId');
+    if (!auction) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Auction not found',
+          code: 'AUCTION_NOT_FOUND'
+        }
+      });
+    }
+    
+    const phone = auction.phoneId;
+    if (phone.sellerId.toString() !== req.userId && req.userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Access denied',
+          code: 'NOT_AUTHORIZED'
+        }
+      });
+    }
+    
+    // Get all bids for this auction
+    const bids = await Bid.find({ auctionId }).sort({ bidAmount: -1 });
+    
+    // Return bids with anonymous IDs (seller can see all bids but not real identities)
+    const bidsData = bids.map(bid => ({
+      _id: bid._id,
+      anonymousBidderId: bid.anonymousBidderId,
+      bidAmount: bid.bidAmount,
+      timestamp: bid.timestamp,
+      isWinning: bid.isWinning
+    }));
+    
+    res.json({
+      success: true,
+      data: bidsData,
+      count: bidsData.length
+    });
+  } catch (error) {
+    console.error('Error fetching seller auction bids:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching bids',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
+export default {
+  placeBid,
+  getAuctionBids,
+  getUserBids,
+  acceptBid,
+  getSellerAuctionBids
 };

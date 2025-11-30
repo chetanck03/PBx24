@@ -1,199 +1,443 @@
-import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
-import Listing from '../models/Listing.js';
+import Phone from '../models/Phone.js';
+import Auction from '../models/Auction.js';
 import Bid from '../models/Bid.js';
+import Transaction from '../models/Transaction.js';
 
-// Get all transactions
-export const getAllTransactions = async (req, res) => {
-  try {
-    const { status, page = 1, limit = 10 } = req.query;
-    
-    const filter = {};
-    if (status) filter.status = status;
-
-    const transactions = await Transaction.find(filter)
-      .populate('seller', 'name email avatar')
-      .populate('buyer', 'name email avatar')
-      .populate('listing', 'title brand model images')
-      .populate('winningBid', 'amount')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Transaction.countDocuments(filter);
-
-    res.json({
-      success: true,
-      data: {
-        transactions,
-        pagination: {
-          current: page,
-          pages: Math.ceil(total / limit),
-          total
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get all transactions error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to fetch transactions' }
-    });
-  }
-};
-
-// Approve transaction
-export const approveTransaction = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { adminNotes } = req.body;
-
-    const transaction = await Transaction.findById(id);
-    if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        error: { message: 'Transaction not found' }
-      });
-    }
-
-    transaction.status = 'approved';
-    transaction.adminNotes = adminNotes || '';
-    await transaction.save();
-
-    res.json({
-      success: true,
-      data: { transaction }
-    });
-  } catch (error) {
-    console.error('Approve transaction error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to approve transaction' }
-    });
-  }
-};
-
-// Flag transaction
-export const flagTransaction = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { adminNotes } = req.body;
-
-    const transaction = await Transaction.findById(id);
-    if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        error: { message: 'Transaction not found' }
-      });
-    }
-
-    transaction.status = 'flagged';
-    transaction.adminNotes = adminNotes || '';
-    await transaction.save();
-
-    res.json({
-      success: true,
-      data: { transaction }
-    });
-  } catch (error) {
-    console.error('Flag transaction error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to flag transaction' }
-    });
-  }
-};
-
-// Get all users
+/**
+ * Get all users with full decrypted data
+ */
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, role } = req.query;
+    const { page = 1, limit = 20, role, kycStatus } = req.query;
     
     const filter = {};
     if (role) filter.role = role;
-
+    if (kycStatus) filter.kycStatus = kycStatus;
+    
     const users = await User.find(filter)
-      .select('-googleId')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
-
+    
     const total = await User.countDocuments(filter);
-
+    
+    // Return full decrypted data for admin
+    const usersData = users.map(user => user.toFullObject());
+    
     res.json({
       success: true,
-      data: {
-        users,
-        pagination: {
-          current: page,
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: usersData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {
-    console.error('Get all users error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to fetch users' }
+      error: {
+        message: 'Error fetching users',
+        code: 'FETCH_ERROR'
+      }
     });
   }
 };
 
-// Get platform statistics
-export const getPlatformStatistics = async (req, res) => {
+/**
+ * Get user by ID with full data
+ */
+export const getUserById = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalListings = await Listing.countDocuments();
-    const activeListings = await Listing.countDocuments({ status: 'active' });
-    const totalBids = await Bid.countDocuments();
-    const totalTransactions = await Transaction.countDocuments();
-    const pendingTransactions = await Transaction.countDocuments({ status: 'pending' });
+    const { id } = req.params;
+    const user = await User.findById(id);
     
-    // Revenue calculation (sum of all completed transactions)
-    const revenueResult = await Transaction.aggregate([
-      { $match: { status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
-
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
     res.json({
       success: true,
-      data: {
-        users: {
-          total: totalUsers,
-          admins: await User.countDocuments({ role: 'admin' }),
-          regular: await User.countDocuments({ role: 'user' })
-        },
-        listings: {
-          total: totalListings,
-          active: activeListings,
-          sold: await Listing.countDocuments({ status: 'sold' }),
-          expired: await Listing.countDocuments({ status: 'expired' })
-        },
-        bids: {
-          total: totalBids,
-          winning: await Bid.countDocuments({ status: 'winning' }),
-          selected: await Bid.countDocuments({ status: 'selected' })
-        },
-        transactions: {
-          total: totalTransactions,
-          pending: pendingTransactions,
-          approved: await Transaction.countDocuments({ status: 'approved' }),
-          completed: await Transaction.countDocuments({ status: 'completed' }),
-          flagged: await Transaction.countDocuments({ status: 'flagged' })
-        },
-        revenue: {
-          total: totalRevenue,
-          thisMonth: 0 // TODO: Calculate this month's revenue
+      data: user.toFullObject()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching user',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Review and update KYC status
+ */
+export const reviewKYC = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { kycStatus, notes } = req.body;
+    
+    if (!['verified', 'rejected'].includes(kycStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid KYC status',
+          code: 'INVALID_STATUS'
         }
+      });
+    }
+    
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    user.kycStatus = kycStatus;
+    await user.save();
+    
+    res.json({
+      success: true,
+      data: user.toFullObject(),
+      message: `KYC ${kycStatus} successfully`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error reviewing KYC',
+        code: 'REVIEW_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Get all phones with full data including IMEI
+ */
+export const getAllPhones = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status, verificationStatus, sellerId } = req.query;
+    
+    const filter = {};
+    if (status) filter.status = status;
+    if (verificationStatus) filter.verificationStatus = verificationStatus;
+    if (sellerId) filter.sellerId = sellerId;
+    
+    const phones = await Phone.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Phone.countDocuments(filter);
+    
+    // Return full admin view with decrypted IMEI
+    const phonesData = phones.map(phone => phone.toAdminObject());
+    
+    res.json({
+      success: true,
+      data: phonesData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {
-    console.error('Get platform statistics error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to fetch statistics' }
+      error: {
+        message: 'Error fetching phones',
+        code: 'FETCH_ERROR',
+        details: error.message
+      }
     });
   }
+};
+
+/**
+ * Get phone by ID with full data
+ */
+export const getPhoneById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const phone = await Phone.findById(id);
+    
+    if (!phone) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Phone not found',
+          code: 'PHONE_NOT_FOUND'
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: phone.toAdminObject()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching phone',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Get all transactions with decrypted IDs
+ */
+export const getAllTransactions = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, meetingStatus, escrowStatus } = req.query;
+    
+    const filter = {};
+    if (meetingStatus) filter.meetingStatus = meetingStatus;
+    if (escrowStatus) filter.escrowStatus = escrowStatus;
+    
+    const transactions = await Transaction.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Transaction.countDocuments(filter);
+    
+    // Return full admin view with decrypted IDs
+    const transactionsData = transactions.map(transaction => transaction.toAdminObject());
+    
+    res.json({
+      success: true,
+      data: transactionsData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching transactions',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Update transaction admin notes
+ */
+export const updateTransactionNotes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminNotes } = req.body;
+    
+    const transaction = await Transaction.findById(id);
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Transaction not found',
+          code: 'TRANSACTION_NOT_FOUND'
+        }
+      });
+    }
+    
+    transaction.adminNotes = adminNotes;
+    await transaction.save();
+    
+    res.json({
+      success: true,
+      data: transaction.toAdminObject(),
+      message: 'Admin notes updated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error updating notes',
+        code: 'UPDATE_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Search by real or anonymous ID
+ */
+export const searchByIds = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Search query is required',
+          code: 'MISSING_QUERY'
+        }
+      });
+    }
+    
+    const results = {
+      users: [],
+      phones: [],
+      auctions: [],
+      bids: [],
+      transactions: []
+    };
+    
+    // Search users by real ID or anonymous ID
+    const users = await User.find({
+      $or: [
+        { _id: query },
+        { anonymousId: query }
+      ]
+    });
+    results.users = users.map(u => u.toFullObject());
+    
+    // Search phones by real seller ID or anonymous seller ID
+    const phones = await Phone.find({
+      $or: [
+        { _id: query },
+        { sellerId: query },
+        { anonymousSellerId: query }
+      ]
+    });
+    results.phones = phones.map(p => p.toAdminObject());
+    
+    // Search auctions
+    const auctions = await Auction.find({ _id: query });
+    results.auctions = auctions.map(a => a.toAdminObject());
+    
+    // Search bids
+    const allBids = await Bid.find({});
+    const matchingBids = allBids.filter(bid => {
+      return bid._id.toString() === query || 
+             bid.getBidderId() === query ||
+             bid.anonymousBidderId === query;
+    });
+    results.bids = matchingBids.map(b => b.toAdminObject());
+    
+    // Search transactions
+    const allTransactions = await Transaction.find({});
+    const matchingTransactions = allTransactions.filter(transaction => {
+      return transaction._id.toString() === query ||
+             transaction.getSellerId() === query ||
+             transaction.getBuyerId() === query;
+    });
+    results.transactions = matchingTransactions.map(t => t.toAdminObject());
+    
+    res.json({
+      success: true,
+      data: results,
+      query
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error searching',
+        code: 'SEARCH_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Get platform statistics
+ */
+export const getPlatformStatistics = async (req, res) => {
+  try {
+    const stats = {
+      users: {
+        total: await User.countDocuments(),
+        buyers: await User.countDocuments({ role: 'user' }),
+        sellers: await User.countDocuments({ role: 'user' }),
+        admins: await User.countDocuments({ role: 'admin' }),
+        kycPending: await User.countDocuments({ kycStatus: 'pending' }),
+        kycVerified: await User.countDocuments({ kycStatus: 'verified' }),
+        banned: await User.countDocuments({ isBanned: true })
+      },
+      phones: {
+        total: await Phone.countDocuments(),
+        pending: await Phone.countDocuments({ verificationStatus: 'pending' }),
+        approved: await Phone.countDocuments({ verificationStatus: 'approved' }),
+        rejected: await Phone.countDocuments({ verificationStatus: 'rejected' }),
+        live: await Phone.countDocuments({ status: 'live' }),
+        sold: await Phone.countDocuments({ status: 'sold' })
+      },
+      auctions: {
+        total: await Auction.countDocuments(),
+        active: await Auction.countDocuments({ status: 'active' }),
+        ended: await Auction.countDocuments({ status: 'ended' }),
+        completed: await Auction.countDocuments({ status: 'completed' })
+      },
+      bids: {
+        total: await Bid.countDocuments(),
+        winning: await Bid.countDocuments({ isWinning: true })
+      },
+      transactions: {
+        total: await Transaction.countDocuments(),
+        pending: await Transaction.countDocuments({ meetingStatus: 'pending' }),
+        completed: await Transaction.countDocuments({ meetingStatus: 'completed' }),
+        escrowHeld: await Transaction.countDocuments({ escrowStatus: 'held' }),
+        escrowReleased: await Transaction.countDocuments({ escrowStatus: 'released' })
+      }
+    };
+    
+    // Calculate revenue
+    const transactions = await Transaction.find({ escrowStatus: 'released' });
+    stats.revenue = {
+      totalPlatformCommission: transactions.reduce((sum, t) => sum + t.platformCommission, 0),
+      totalSellerPayouts: transactions.reduce((sum, t) => sum + t.sellerPayout, 0),
+      totalTransactionValue: transactions.reduce((sum, t) => sum + t.finalAmount, 0)
+    };
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching statistics',
+        code: 'STATS_ERROR'
+      }
+    });
+  }
+};
+
+export default {
+  getAllUsers,
+  getUserById,
+  reviewKYC,
+  getAllPhones,
+  getPhoneById,
+  getAllTransactions,
+  updateTransactionNotes,
+  searchByIds,
+  getPlatformStatistics
 };

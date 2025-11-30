@@ -23,19 +23,44 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
       if (!token) {
         setLoading(false);
         return;
       }
 
-      const response = await api.get(config.endpoints.auth.me);
-      if (response.data.success) {
-        setUser(response.data.data.user);
+      // If we have stored user data, use it immediately
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } catch (e) {
+          console.error('Error parsing stored user:', e);
+        }
+      }
+
+      // Then verify with server
+      try {
+        const response = await api.get(config.endpoints.auth.me);
+        if (response.data.success) {
+          setUser(response.data.data.user);
+          localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        }
+      } catch (error) {
+        // If server check fails but we have token, keep the stored user
+        console.error('Server auth check failed:', error);
+        if (!storedUser) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -69,11 +94,18 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
+    updateUser,
+    checkAuth,
     isAuthenticated: !!user
   };
 

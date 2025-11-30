@@ -7,9 +7,15 @@ import connectDB from './config/database.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
-import listingRoutes from './routes/listings.js';
+import enhancedAuthRoutes from './routes/enhancedAuth.js';
+import userRoutes from './routes/users.js';
+import phoneRoutes from './routes/phones.js';
+import auctionRoutes from './routes/auctions.js';
 import bidRoutes from './routes/bids.js';
+import transactionRoutes from './routes/transactions.js';
 import adminRoutes from './routes/admin.js';
+import complaintRoutes from './routes/complaints.js';
+import listingRoutes from './routes/listings.js'; // Keep for backward compatibility
 
 // Load environment variables
 dotenv.config();
@@ -60,23 +66,27 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Handle preflight requests
-app.options('*', cors());
-
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase payload size limit for image uploads (base64 encoded images)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/listings', listingRoutes);
+app.use('/api/v2/auth', enhancedAuthRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/phones', phoneRoutes);
+app.use('/api/auctions', auctionRoutes);
 app.use('/api/bids', bidRoutes);
+app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/complaints', complaintRoutes);
+app.use('/api/listings', listingRoutes); // Keep for backward compatibility
 
 // Default route
 app.get('/', (req, res) => {
@@ -110,22 +120,14 @@ io.on('connection', (socket) => {
 // Make io accessible to routes
 app.set('io', io);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: { message: 'Something went wrong!' }
-  });
-});
+// Import error handlers
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: { message: 'Route not found' }
-  });
-});
+app.use(notFound);
+
+// Error handling middleware
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
