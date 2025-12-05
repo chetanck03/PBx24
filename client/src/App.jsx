@@ -460,7 +460,8 @@ function AppContent() {
           </main>
 
           <Toaster position="top-right" />
-          <Chatbot />
+          {/* Hide chatbot on reels page */}
+          {location.pathname !== '/reels' && <Chatbot />}
         </div>
   );
 }

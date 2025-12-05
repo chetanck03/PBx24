@@ -12,7 +12,17 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [soldPhones, setSoldPhones] = useState([]);
   const [purchasedPhones, setPurchasedPhones] = useState([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  const menuItems = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'my-phones', label: 'My Phones', icon: '📱' },
+    { id: 'my-bids', label: 'My Bids', icon: '💰' },
+    { id: 'sold-phones', label: 'Sold Phones', icon: '✅' },
+    { id: 'purchased-phones', label: 'Purchased', icon: '🛒' },
+    { id: 'wallet', label: 'Wallet', icon: '💳' },
+  ];
 
   useEffect(() => {
     loadDashboardData();
@@ -66,17 +76,6 @@ const UserDashboard = () => {
     purchased: purchasedPhones.length,
     wallet: user?.walletBalance || 0
   };
-
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const menuItems = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'my-phones', label: 'My Phones', icon: '📱' },
-    { id: 'my-bids', label: 'My Bids', icon: '💰' },
-    { id: 'sold-phones', label: 'Sold Phones', icon: '✅' },
-    { id: 'purchased-phones', label: 'Purchased', icon: '🛒' },
-    { id: 'wallet', label: 'Wallet', icon: '💳' },
-  ];
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
