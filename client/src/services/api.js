@@ -97,14 +97,39 @@ export const adminAPI = {
   getAllUsers: (params) => api.get('/admin/users', { params }),
   getUserById: (id) => api.get(`/admin/users/${id}`),
   reviewKYC: (userId, kycStatus, notes) => api.put(`/admin/users/${userId}/kyc`, { kycStatus, notes }),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getAllPhones: (params) => api.get('/admin/phones', { params }),
   getPhoneById: (id) => api.get(`/admin/phones/${id}`),
+  getPhoneBids: (phoneId) => api.get(`/admin/phones/${phoneId}/bids`),
   verifyPhone: (phoneId, data) => api.put(`/admin/phones/${phoneId}/verify`, data),
+  deletePhone: (id) => api.delete(`/admin/phones/${id}`),
   getAllTransactions: (params) => api.get('/admin/transactions', { params }),
   getAllBids: (params) => api.get('/admin/bids', { params }),
   updateTransactionNotes: (id, adminNotes) => api.put(`/admin/transactions/${id}/notes`, { adminNotes }),
   searchByIds: (query) => api.get('/admin/search', { params: { query } }),
-  getPlatformStatistics: () => api.get('/admin/statistics')
+  getPlatformStatistics: () => api.get('/admin/statistics'),
+  getAllComplaints: (params) => api.get('/admin/complaints', { params }),
+  updateComplaint: (id, data) => api.put(`/admin/complaints/${id}`, data)
+};
+
+// Reel API
+export const reelAPI = {
+  uploadReel: (formData, onUploadProgress) => {
+    return api.post('/reels/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress
+    });
+  },
+  getAllReels: (page = 1, limit = 10) => api.get('/reels/all', { params: { page, limit } }),
+  getUserReels: (userId, page = 1, limit = 12) => api.get(`/reels/user/${userId}`, { params: { page, limit } }),
+  getMyReels: (page = 1, limit = 12) => api.get('/reels/my/reels', { params: { page, limit } }),
+  getReelById: (id) => api.get(`/reels/${id}`),
+  deleteReel: (id) => api.delete(`/reels/${id}`),
+  toggleLike: (id) => api.post(`/reels/${id}/like`),
+  checkLikeStatus: (id) => api.get(`/reels/${id}/like/status`),
+  getComments: (id, page = 1, limit = 20) => api.get(`/reels/${id}/comments`, { params: { page, limit } }),
+  addComment: (id, text) => api.post(`/reels/${id}/comments`, { text }),
+  deleteComment: (reelId, commentId) => api.delete(`/reels/${reelId}/comments/${commentId}`)
 };
 
 // Complaint API

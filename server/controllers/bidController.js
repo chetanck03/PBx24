@@ -214,20 +214,76 @@ export const getAuctionBids = async (req, res) => {
 };
 
 /**
- * Get user's bids
+ * Get user's bids - shows only latest bid per phone
  */
 export const getUserBids = async (req, res) => {
   try {
-    // Find all bids where the encrypted bidderId matches the user
-    const allBids = await Bid.find({}).populate('auctionId');
+    // Find all bids and populate auction with phone details
+    const allBids = await Bid.find({})
+      .populate({
+        path: 'auctionId',
+        populate: {
+          path: 'phoneId',
+          model: 'Phone'
+        }
+      })
+      .sort({ timestamp: -1 });
     
     // Filter bids that belong to this user (decrypt and compare)
     const userBids = allBids.filter(bid => {
-      const decryptedBidderId = bid.getBidderId();
-      return decryptedBidderId === req.userId;
+      try {
+        const decryptedBidderId = bid.getBidderId();
+        return decryptedBidderId === req.userId;
+      } catch (error) {
+        console.error('Error decrypting bid:', error);
+        return false;
+      }
     });
     
-    const bidsData = userBids.map(bid => bid.toSelfObject());
+    // Group bids by phone ID and keep only the latest bid per phone
+    const phoneMap = new Map();
+    
+    userBids.forEach(bid => {
+      if (bid.auctionId && bid.auctionId.phoneId) {
+        const phoneId = bid.auctionId.phoneId._id.toString();
+        
+        // If this phone is not in map, or this bid is newer, update it
+        if (!phoneMap.has(phoneId)) {
+          phoneMap.set(phoneId, bid);
+        }
+        // Since bids are already sorted by timestamp DESC, first occurrence is latest
+      }
+    });
+    
+    // Convert map values to array and map with phone details
+    const uniqueBids = Array.from(phoneMap.values());
+    
+    const bidsData = uniqueBids.map(bid => {
+      const bidObj = bid.toSelfObject();
+      
+      // Add phone details if available
+      if (bid.auctionId && bid.auctionId.phoneId) {
+        const phone = bid.auctionId.phoneId;
+        bidObj.phone = {
+          _id: phone._id,
+          brand: phone.brand,
+          model: phone.model,
+          storage: phone.storage,
+          condition: phone.condition,
+          images: phone.images,
+          minBidPrice: phone.minBidPrice,
+          status: phone.status
+        };
+        bidObj.auction = {
+          _id: bid.auctionId._id,
+          status: bid.auctionId.status,
+          auctionEndTime: bid.auctionId.auctionEndTime,
+          currentBid: bid.auctionId.currentBid
+        };
+      }
+      
+      return bidObj;
+    });
     
     res.json({
       success: true,
@@ -235,11 +291,13 @@ export const getUserBids = async (req, res) => {
       count: bidsData.length
     });
   } catch (error) {
+    console.error('Error fetching user bids:', error);
     res.status(500).json({
       success: false,
       error: {
         message: 'Error fetching user bids',
-        code: 'FETCH_ERROR'
+        code: 'FETCH_ERROR',
+        details: error.message
       }
     });
   }

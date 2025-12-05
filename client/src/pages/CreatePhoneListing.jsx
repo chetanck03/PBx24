@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
+import Footer from '../components/common/Footer';
 
 const CreatePhoneListing = () => {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     brand: '',
     model: '',
@@ -11,10 +13,11 @@ const CreatePhoneListing = () => {
     ram: '',
     color: '',
     imei: '',
-    condition: 'good',
+    condition: 'Excellent',
     description: '',
     minBidPrice: '',
     auctionDuration: '7',
+    location: '',
     accessories: {
       charger: false,
       bill: false,
@@ -44,13 +47,12 @@ const CreatePhoneListing = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // If brand changes, update available models
     if (name === 'brand') {
       setAvailableModels(phoneData[value] || []);
       setFormData({
         ...formData,
         brand: value,
-        model: '' // Reset model when brand changes
+        model: ''
       });
     } else {
       setFormData({
@@ -82,7 +84,6 @@ const CreatePhoneListing = () => {
           let width = img.width;
           let height = img.height;
 
-          // Calculate new dimensions
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
             width = maxWidth;
@@ -94,7 +95,6 @@ const CreatePhoneListing = () => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to base64 with compression
           canvas.toBlob(
             (blob) => {
               const reader = new FileReader();
@@ -115,7 +115,6 @@ const CreatePhoneListing = () => {
     
     if (files.length === 0) return;
     
-    // Check if adding these files would exceed 6 images
     const currentImageCount = images.filter(img => img).length;
     const availableSlots = 6 - currentImageCount;
     
@@ -126,16 +125,13 @@ const CreatePhoneListing = () => {
     
     setError('Compressing images...');
     
-    // Convert files to compressed base64
     const base64Images = await Promise.all(
       files.map(async (file) => {
         try {
-          // Check file size (10MB limit before compression)
-          if (file.size > 10 * 1024 * 1024) {
-            throw new Error(`${file.name} is too large. Maximum 10MB per image.`);
+          if (file.size > 3 * 1024 * 1024) {
+            throw new Error(`${file.name} is too large. Maximum 3MB per image.`);
           }
           
-          // Compress image
           const compressed = await compressImage(file, 800, 0.7);
           return compressed;
         } catch (error) {
@@ -149,12 +145,10 @@ const CreatePhoneListing = () => {
     
     if (base64Images.length === 0) return;
     
-    // Add new images to the array
     const newImages = [...images];
     let insertIndex = 0;
     
     for (const base64 of base64Images) {
-      // Find next empty slot
       while (insertIndex < 6 && newImages[insertIndex]) {
         insertIndex++;
       }
@@ -177,17 +171,16 @@ const CreatePhoneListing = () => {
     e.preventDefault();
     setError('');
     
-    // Validate images
+    // Validate images - MINIMUM 2 REQUIRED
     const validImages = images.filter(img => img.trim() !== '');
-    if (validImages.length < 1) {
-      setError('Please provide at least 1 image');
+    if (validImages.length < 2) {
+      setError('Please upload at least 2 images of your phone');
       return;
     }
     
     try {
       setSubmitting(true);
       
-      // Calculate auction end time
       const auctionEndTime = new Date();
       auctionEndTime.setDate(auctionEndTime.getDate() + parseInt(formData.auctionDuration));
       
@@ -215,315 +208,367 @@ const CreatePhoneListing = () => {
     }
   };
 
+  const uploadedCount = images.filter(img => img).length;
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Phone Listing</h1>
+    <div className="min-h-screen bg-[#0a0a0a] py-4 lg:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6 lg:mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#c4ff0d] rounded-xl flex items-center justify-center">
+              <span className="text-black font-bold text-lg lg:text-xl">P</span>
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white">Create Listing</h1>
+          </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Brand *
-                </label>
-                <select
-                  name="brand"
-                  value={formData.brand}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Brand</option>
-                  {Object.keys(phoneData).map(brand => (
-                    <option key={brand} value={brand}>{brand}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Model *
-                </label>
-                <select
-                  name="model"
-                  value={formData.model}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  disabled={!formData.brand}
-                >
-                  <option value="">Select Model</option>
-                  {availableModels.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-                {!formData.brand && (
-                  <p className="text-xs text-gray-500 mt-1">Select a brand first</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Storage *
-                </label>
-                <select
-                  name="storage"
-                  value={formData.storage}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Storage</option>
-                  <option value="64GB">64GB</option>
-                  <option value="128GB">128GB</option>
-                  <option value="256GB">256GB</option>
-                  <option value="512GB">512GB</option>
-                  <option value="1TB">1TB</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RAM
-                </label>
-                <input
-                  type="text"
-                  name="ram"
-                  value={formData.ram}
-                  onChange={handleChange}
-                  placeholder="e.g., 8GB"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Color
-                </label>
-                <input
-                  type="text"
-                  name="color"
-                  value={formData.color}
-                  onChange={handleChange}
-                  placeholder="e.g., Space Gray"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  IMEI Number * (Encrypted)
-                </label>
-                <input
-                  type="text"
-                  name="imei"
-                  value={formData.imei}
-                  onChange={handleChange}
-                  placeholder="15-digit IMEI"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Only visible to admins</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Condition *
-                </label>
-                <select
-                  name="condition"
-                  value={formData.condition}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="excellent">Excellent</option>
-                  <option value="good">Good</option>
-                  <option value="fair">Fair</option>
-                  <option value="poor">Poor</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Bid Price * (₹)
-                </label>
-                <input
-                  type="number"
-                  name="minBidPrice"
-                  value={formData.minBidPrice}
-                  onChange={handleChange}
-                  placeholder="5000"
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+          {/* Progress Indicator */}
+          <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-[#c4ff0d]">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Uploads & Ingestion</span>
             </div>
-
-            {/* Accessories */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Included Accessories
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <label className="flex items-center space-x-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.accessories.charger}
-                    onChange={() => handleAccessoryChange('charger')}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">🔌 Charger</span>
-                </label>
-                
-                <label className="flex items-center space-x-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.accessories.bill}
-                    onChange={() => handleAccessoryChange('bill')}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">📄 Bill</span>
-                </label>
-                
-                <label className="flex items-center space-x-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={formData.accessories.box}
-                    onChange={() => handleAccessoryChange('box')}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">📦 Box</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="4"
-                placeholder="Describe your phone's condition, features, and any additional details..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {/* Images */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Images * (Minimum 1 required, up to 6)
-              </label>
-              
-              {/* Image Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer flex flex-col items-center"
-                >
-                  <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span className="text-sm text-gray-600">Click to upload images</span>
-                  <span className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB each</span>
-                </label>
-              </div>
-
-              {/* Image Previews */}
-              {images.filter(img => img).length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                  {images.map((img, index) => img && (
-                    <div key={index} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                        Image {index + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-sm text-gray-600">
-                Uploaded: {images.filter(img => img).length} / 6 maximum
-              </p>
-            </div>
-
-            {/* Auction Duration */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Auction Duration *
-              </label>
-              <select
-                name="auctionDuration"
-                value={formData.auctionDuration}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="1">1 Day</option>
-                <option value="3">3 Days</option>
-                <option value="7">7 Days</option>
-                <option value="14">14 Days</option>
-                <option value="30">30 Days</option>
-              </select>
-            </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            {/* Submit */}
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Creating Listing...' : 'Create Listing'}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+            {/* Column 1: Device Details */}
+            <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-xl lg:rounded-2xl p-4 lg:p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-2xl font-bold text-white">1.</span>
+                <h2 className="text-xl font-bold text-white">Device Details</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Brand</label>
+                  <select
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                    required
+                  >
+                    <option value="">Select Brand</option>
+                    {Object.keys(phoneData).map(brand => (
+                      <option key={brand} value={brand}>{brand}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Model</label>
+                  <select
+                    name="model"
+                    value={formData.model}
+                    onChange={handleChange}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                    required
+                    disabled={!formData.brand}
+                  >
+                    <option value="">Select Model</option>
+                    {availableModels.map(model => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Storage</label>
+                  <select
+                    name="storage"
+                    value={formData.storage}
+                    onChange={handleChange}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                    required
+                  >
+                    <option value="">Select Storage</option>
+                    <option value="64GB">64GB</option>
+                    <option value="128GB">128GB</option>
+                    <option value="256GB">256GB</option>
+                    <option value="512GB">512GB</option>
+                    <option value="1TB">1TB</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">RAM</label>
+                  <select
+                    name="ram"
+                    value={formData.ram}
+                    onChange={handleChange}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                  >
+                    <option value="">Select RAM</option>
+                    <option value="4GB">4GB</option>
+                    <option value="6GB">6GB</option>
+                    <option value="8GB">8GB</option>
+                    <option value="12GB">12GB</option>
+                    <option value="16GB">16GB</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Color</label>
+                  <input
+                    type="text"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    placeholder="e.g., Space Gray"
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">IMEI Number</label>
+                  <input
+                    type="text"
+                    name="imei"
+                    value={formData.imei}
+                    onChange={handleChange}
+                    placeholder="15-digit IMEI"
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-gray-500 text-xs pt-2">
+                  <svg className="w-4 h-4 text-[#c4ff0d]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>(Encrypted, Only visible to admins)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Condition & Auction */}
+            <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-2xl font-bold text-white">2.</span>
+                <h2 className="text-xl font-bold text-white">Condition & Auction</h2>
+              </div>
+
+              <div className="space-y-6">
+                {/* Condition */}
+                <div>
+                  <label className="text-white font-semibold mb-3 block">Condition</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Excellent', 'Good', 'Fair'].map(cond => (
+                      <button
+                        key={cond}
+                        type="button"
+                        onClick={() => setFormData({...formData, condition: cond})}
+                        className={`py-2 px-4 rounded-lg font-semibold transition ${
+                          formData.condition === cond
+                            ? 'bg-[#c4ff0d] text-black'
+                            : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#2a2a2a]'
+                        }`}
+                      >
+                        {cond}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Minimum Bid Price */}
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Minimum Bid Price (₹)</label>
+                  <input
+                    type="number"
+                    name="minBidPrice"
+                    value={formData.minBidPrice}
+                    onChange={handleChange}
+                    placeholder="Enter minimum bid"
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                    required
+                  />
+                </div>
+
+                {/* Device Location */}
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Device Location (City)</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    placeholder="e.g., Mumbai, Delhi"
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                    required
+                  />
+                </div>
+
+                {/* Included Accessories */}
+                <div>
+                  <label className="text-white font-semibold mb-3 block flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Included Accessories
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { key: 'charger', label: 'Charger', icon: '🔌' },
+                      { key: 'bill', label: '7 Days', icon: '📄' },
+                      { key: 'box', label: '14 Box', icon: '📦' }
+                    ].map(acc => (
+                      <button
+                        key={acc.key}
+                        type="button"
+                        onClick={() => handleAccessoryChange(acc.key)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${
+                          formData.accessories[acc.key]
+                            ? 'bg-[#c4ff0d] bg-opacity-20 border border-[#c4ff0d]'
+                            : 'bg-[#1a1a1a] border border-[#2a2a2a]'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          formData.accessories[acc.key]
+                            ? 'bg-[#c4ff0d] border-[#c4ff0d]'
+                            : 'border-gray-600'
+                        }`}>
+                          {formData.accessories[acc.key] && (
+                            <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-gray-300 text-sm">{acc.icon} {acc.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Auction Duration */}
+                <div>
+                  <label className="text-white font-semibold mb-3 block">Auction Duration</label>
+                  <select
+                    name="auctionDuration"
+                    value={formData.auctionDuration}
+                    onChange={handleChange}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                    required
+                  >
+                    <option value="1">1 Day</option>
+                    <option value="3">3 Days</option>
+                    <option value="7">7 Days</option>
+                    <option value="14">14 Days</option>
+                    <option value="30">30 Days</option>
+                  </select>
+                  <p className="text-gray-500 text-xs mt-2">34 4. Days</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Upload & Describe */}
+            <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-2xl font-bold text-white">3.</span>
+                <h2 className="text-xl font-bold text-white">Upload & Describe</h2>
+              </div>
+
+              <div className="space-y-6">
+                {/* Image Upload */}
+                <div>
+                  <div className="border-2 border-dashed border-[#2a2a2a] rounded-xl p-8 text-center hover:border-[#c4ff0d] transition">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="text-gray-400 mb-2">Drag & drop images</p>
+                      <p className="text-gray-600 text-xs">Click to upload images. PNG, JPG up 3MB each.</p>
+                      <p className="text-[#c4ff0d] text-sm mt-2 font-semibold">
+                        Uploaded: {uploadedCount} / 6 maximum
+                      </p>
+                      {uploadedCount < 2 && (
+                        <p className="text-red-400 text-xs mt-2">⚠️ Minimum 2 images required</p>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* Image Previews */}
+                  {uploadedCount > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      {images.map((img, index) => img && (
+                        <div key={index} className="relative group">
+                          <img
+                            src={img}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-[#2a2a2a]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-white font-semibold mb-3 block">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows="6"
+                    placeholder="Saleintou..."
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600 resize-none"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-6 p-4 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex gap-4 justify-center">
+            <button
+              type="submit"
+              disabled={submitting || uploadedCount < 2}
+              className="bg-[#c4ff0d] text-black px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#d4ff3d] transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Creating Listing...' : 'Create Listing'}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#2a2a2a] transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
+      <Footer />
     </div>
   );
 };

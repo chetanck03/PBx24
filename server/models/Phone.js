@@ -60,7 +60,7 @@ const phoneSchema = new mongoose.Schema({
   // Listing details
   condition: {
     type: String,
-    enum: ['excellent', 'good', 'fair', 'poor'],
+    enum: ['Excellent', 'Good', 'Fair', 'Poor', 'excellent', 'good', 'fair', 'poor'],
     required: true
   },
   images: {
@@ -68,9 +68,9 @@ const phoneSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: function(images) {
-        return images && images.length >= 6;
+        return images && images.length >= 2 && images.length <= 6;
       },
-      message: 'At least 6 images are required'
+      message: 'Between 2 and 6 images are required'
     }
   },
   description: {
@@ -107,6 +107,13 @@ const phoneSchema = new mongoose.Schema({
     type: String,
     enum: ['draft', 'pending', 'live', 'ended', 'sold', 'cancelled'],
     default: 'draft'
+  },
+  
+  // Location
+  location: {
+    type: String,
+    required: true,
+    trim: true
   }
 }, {
   timestamps: true
@@ -118,6 +125,7 @@ phoneSchema.index({ anonymousSellerId: 1 });
 phoneSchema.index({ status: 1, auctionEndTime: 1 });
 phoneSchema.index({ verificationStatus: 1 });
 phoneSchema.index({ brand: 1, model: 1 });
+phoneSchema.index({ location: 1 });
 
 // Pre-save hook to set anonymousSellerId from seller's anonymousId
 phoneSchema.pre('save', async function(next) {
@@ -166,12 +174,15 @@ phoneSchema.methods.toPublicObject = function() {
     ram: this.ram,
     color: this.color,
     condition: this.condition,
+    accessories: this.accessories,
     images: this.images,
     description: this.description,
     minBidPrice: this.minBidPrice,
     auctionStartTime: this.auctionStartTime,
     auctionEndTime: this.auctionEndTime,
+    auctionStatus: this.status,
     status: this.status,
+    location: this.location,
     createdAt: this.createdAt
   };
 };
@@ -183,6 +194,8 @@ phoneSchema.methods.toSellerObject = function() {
     sellerId: this.sellerId,
     verificationStatus: this.verificationStatus,
     adminNotes: this.adminNotes,
+    accessories: this.accessories,
+    location: this.location,
     updatedAt: this.updatedAt
   };
 };
@@ -200,6 +213,7 @@ phoneSchema.methods.toAdminObject = function() {
     color: this.color,
     imei: this.getImei(), // Decrypted
     condition: this.condition,
+    accessories: this.accessories,
     images: this.images,
     description: this.description,
     minBidPrice: this.minBidPrice,
@@ -208,6 +222,7 @@ phoneSchema.methods.toAdminObject = function() {
     auctionStartTime: this.auctionStartTime,
     auctionEndTime: this.auctionEndTime,
     status: this.status,
+    location: this.location,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

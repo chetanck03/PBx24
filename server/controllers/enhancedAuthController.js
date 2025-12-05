@@ -84,13 +84,13 @@ export const sendSignupOTP = async (req, res) => {
  */
 export const verifySignupOTP = async (req, res) => {
   try {
-    const { email, otp, name, password } = req.body;
+    const { email, otp, name, password, governmentIdProof, governmentIdType } = req.body;
     
-    if (!email || !otp || !name || !password) {
+    if (!email || !otp || !name || !password || !governmentIdProof || !governmentIdType) {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'All fields are required',
+          message: 'All fields including government ID proof and ID type are required',
           code: 'MISSING_FIELDS'
         }
       });
@@ -123,7 +123,9 @@ export const verifySignupOTP = async (req, res) => {
       email: email.toLowerCase(),
       name,
       password: hashedPassword,
-      googleId: 'email-' + Date.now() // Placeholder for non-Google users
+      googleId: 'email-' + Date.now(), // Placeholder for non-Google users
+      governmentIdProof: governmentIdProof,
+      governmentIdType: governmentIdType
     });
     
     await user.save();

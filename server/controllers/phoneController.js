@@ -9,15 +9,15 @@ export const createPhone = async (req, res) => {
     const {
       brand, model, storage, ram, color, imei,
       condition, images, description, minBidPrice,
-      auctionStartTime, auctionEndTime
+      auctionStartTime, auctionEndTime, location
     } = req.body;
     
     // Validation
-    if (!brand || !model || !storage || !imei || !condition || !images || !description || !minBidPrice) {
+    if (!brand || !model || !storage || !imei || !condition || !images || !description || !minBidPrice || !location) {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Missing required fields',
+          message: 'Missing required fields (including location)',
           code: 'MISSING_FIELDS'
         }
       });
@@ -70,6 +70,7 @@ export const createPhone = async (req, res) => {
       minBidPrice,
       auctionStartTime,
       auctionEndTime,
+      location,
       status: 'pending' // Pending admin verification
     });
     
@@ -101,7 +102,7 @@ export const createPhone = async (req, res) => {
  */
 export const getAllPhones = async (req, res) => {
   try {
-    const { status, brand, condition, minPrice, maxPrice } = req.query;
+    const { status, brand, condition, minPrice, maxPrice, location } = req.query;
     
     const query = {};
     
@@ -114,6 +115,10 @@ export const getAllPhones = async (req, res) => {
     
     if (brand) query.brand = brand;
     if (condition) query.condition = condition;
+    if (location) {
+      // Case-insensitive location search
+      query.location = { $regex: location, $options: 'i' };
+    }
     if (minPrice || maxPrice) {
       query.minBidPrice = {};
       if (minPrice) query.minBidPrice.$gte = Number(minPrice);

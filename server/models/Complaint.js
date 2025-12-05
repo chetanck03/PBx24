@@ -22,6 +22,19 @@ const complaintSchema = new mongoose.Schema({
     maxlength: 2000
   },
   
+  // User's email (for contact)
+  userEmail: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  
+  // Proof/Evidence (optional - image URL or file path)
+  proof: {
+    type: String,
+    default: ''
+  },
+  
   category: {
     type: String,
     enum: ['bidding', 'payment', 'phone_quality', 'seller_issue', 'buyer_issue', 'technical', 'other'],
@@ -92,6 +105,8 @@ complaintSchema.methods.toDetailedObject = function() {
     userId: this.userId,
     subject: this.subject,
     description: this.description,
+    userEmail: this.userEmail,
+    proof: this.proof,
     category: this.category,
     priority: this.priority,
     status: this.status,

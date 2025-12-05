@@ -10,14 +10,18 @@
     "migrate": "node scripts/migrate.js",
     "test-email": "node scripts/testEmail.js",
     "make-admin": "node scripts/makeAdmin.js",
-    "create-admin": "node scripts/createDefaultAdmin.js"
+    "create-admin": "node scripts/createDefaultAdmin.js",
+    "seed": "node scripts/seedTestData.js",
+    "update-models": "node scripts/updateModels.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "express": "^5.1.0",

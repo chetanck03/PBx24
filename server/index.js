@@ -16,6 +16,8 @@ import transactionRoutes from './routes/transactions.js';
 import adminRoutes from './routes/admin.js';
 import complaintRoutes from './routes/complaints.js';
 import listingRoutes from './routes/listings.js'; // Keep for backward compatibility
+import reelRoutes from './routes/reels.js';
+import chatbotRoutes from './routes/chatbot.js';
 
 // Load environment variables
 dotenv.config();
@@ -87,6 +89,8 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/listings', listingRoutes); // Keep for backward compatibility
+app.use('/api/reels', reelRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Default route
 app.get('/', (req, res) => {

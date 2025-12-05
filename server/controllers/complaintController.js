@@ -6,13 +6,13 @@ import User from '../models/User.js';
  */
 export const createComplaint = async (req, res) => {
   try {
-    const { subject, description, category, priority, relatedPhone, relatedAuction, relatedTransaction } = req.body;
+    const { subject, description, userEmail, proof, category, priority, relatedPhone, relatedAuction, relatedTransaction } = req.body;
     
-    if (!subject || !description || !category) {
+    if (!subject || !description || !category || !userEmail) {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Subject, description, and category are required',
+          message: 'Subject, description, email, and category are required',
           code: 'MISSING_FIELDS'
         }
       });
@@ -22,6 +22,8 @@ export const createComplaint = async (req, res) => {
       userId: req.userId,
       subject,
       description,
+      userEmail,
+      proof: proof || '',
       category,
       priority: priority || 'medium',
       relatedPhone,

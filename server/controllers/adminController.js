@@ -366,6 +366,169 @@ export const searchByIds = async (req, res) => {
 };
 
 /**
+ * Get all bids for a specific phone (Admin only)
+ */
+export const getPhoneBids = async (req, res) => {
+  try {
+    const { phoneId } = req.params;
+    
+    // Find auction for this phone
+    const auction = await Auction.findOne({ phoneId });
+    
+    if (!auction) {
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'No auction found for this phone'
+      });
+    }
+    
+    // Get all bids for this auction
+    const bids = await Bid.find({ auctionId: auction._id })
+      .sort({ bidAmount: -1 });
+    
+    // Return admin view with decrypted bidder IDs
+    const bidsData = await Promise.all(bids.map(async (bid) => {
+      const bidObj = bid.toAdminObject();
+      
+      // Get bidder details
+      const bidderId = bid.getBidderId();
+      if (bidderId) {
+        const bidder = await User.findById(bidderId);
+        if (bidder) {
+          bidObj.bidderDetails = {
+            name: bidder.name,
+            email: bidder.email,
+            phone: bidder.phone,
+            anonymousId: bidder.anonymousId
+          };
+        }
+      }
+      
+      return bidObj;
+    }));
+    
+    res.json({
+      success: true,
+      data: bidsData,
+      count: bidsData.length,
+      auction: auction.toAdminObject()
+    });
+  } catch (error) {
+    console.error('Error fetching phone bids:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching phone bids',
+        code: 'FETCH_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
+/**
+ * Get all bids with full details (Admin only)
+ */
+export const getAllBids = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, auctionId, phoneId } = req.query;
+    
+    let filter = {};
+    
+    // Filter by auction if provided
+    if (auctionId) {
+      filter.auctionId = auctionId;
+    }
+    
+    // Filter by phone if provided
+    if (phoneId) {
+      const auction = await Auction.findOne({ phoneId });
+      if (auction) {
+        filter.auctionId = auction._id;
+      } else {
+        return res.json({
+          success: true,
+          data: [],
+          count: 0,
+          message: 'No auction found for this phone'
+        });
+      }
+    }
+    
+    const bids = await Bid.find(filter)
+      .populate({
+        path: 'auctionId',
+        populate: {
+          path: 'phoneId',
+          model: 'Phone'
+        }
+      })
+      .sort({ timestamp: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Bid.countDocuments(filter);
+    
+    // Return admin view with decrypted bidder IDs and user details
+    const bidsData = await Promise.all(bids.map(async (bid) => {
+      const bidObj = bid.toAdminObject();
+      
+      // Get bidder details
+      const bidderId = bid.getBidderId();
+      if (bidderId) {
+        const bidder = await User.findById(bidderId);
+        if (bidder) {
+          bidObj.bidderDetails = {
+            _id: bidder._id,
+            name: bidder.name,
+            email: bidder.email,
+            phone: bidder.phone,
+            anonymousId: bidder.anonymousId
+          };
+        }
+      }
+      
+      // Add phone details if available
+      if (bid.auctionId && bid.auctionId.phoneId) {
+        const phone = bid.auctionId.phoneId;
+        bidObj.phoneDetails = {
+          _id: phone._id,
+          brand: phone.brand,
+          model: phone.model,
+          storage: phone.storage,
+          condition: phone.condition,
+          minBidPrice: phone.minBidPrice
+        };
+      }
+      
+      return bidObj;
+    }));
+    
+    res.json({
+      success: true,
+      data: bidsData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching bids:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching bids',
+        code: 'FETCH_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
+/**
  * Get platform statistics
  */
 export const getPlatformStatistics = async (req, res) => {
@@ -439,5 +602,129 @@ export default {
   getAllTransactions,
   updateTransactionNotes,
   searchByIds,
-  getPlatformStatistics
+  getPlatformStatistics,
+  getPhoneBids,
+  getAllBids
+};
+
+
+/**
+ * Delete user (Admin only)
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Prevent deleting yourself
+    if (id === req.userId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Cannot delete your own account',
+          code: 'CANNOT_DELETE_SELF'
+        }
+      });
+    }
+    
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Delete user's phones and related auctions/bids
+    const userPhones = await Phone.find({ sellerId: id });
+    for (const phone of userPhones) {
+      const auction = await Auction.findOne({ phoneId: phone._id });
+      if (auction) {
+        await Bid.deleteMany({ auctionId: auction._id });
+        await Auction.findByIdAndDelete(auction._id);
+      }
+    }
+    await Phone.deleteMany({ sellerId: id });
+    
+    // Delete user's bids
+    await Bid.deleteMany({ bidderId: user.anonymousId });
+    
+    // Delete user's transactions
+    await Transaction.deleteMany({ 
+      $or: [
+        { sellerId: user.anonymousId },
+        { buyerId: user.anonymousId }
+      ]
+    });
+    
+    // Finally delete the user
+    await User.findByIdAndDelete(id);
+    
+    res.json({
+      success: true,
+      message: 'User and all related data deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error deleting user',
+        code: 'DELETE_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
+/**
+ * Delete phone (Admin only)
+ */
+export const deletePhone = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const phone = await Phone.findById(id);
+    
+    if (!phone) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Phone not found',
+          code: 'PHONE_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Delete related auction and bids
+    const auction = await Auction.findOne({ phoneId: id });
+    if (auction) {
+      await Bid.deleteMany({ auctionId: auction._id });
+      await Auction.findByIdAndDelete(auction._id);
+    }
+    
+    // Delete related transactions
+    await Transaction.deleteMany({ phoneId: id });
+    
+    // Finally delete the phone
+    await Phone.findByIdAndDelete(id);
+    
+    res.json({
+      success: true,
+      message: 'Phone and all related data deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting phone:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error deleting phone',
+        code: 'DELETE_ERROR',
+        details: error.message
+      }
+    });
+  }
 };

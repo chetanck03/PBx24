@@ -9,6 +9,24 @@ const auctionSchema = new mongoose.Schema({
     required: true
   },
   
+  // Seller information
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  anonymousSellerId: {
+    type: String,
+    required: true
+  },
+  
+  // Starting bid
+  startingBid: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  
   // Bidding state
   currentBid: {
     type: Number,
@@ -20,6 +38,20 @@ const auctionSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  
+  // Bids array
+  bids: [{
+    bidderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    anonymousBidderId: String,
+    amount: Number,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   
   // Leading bidder (encrypted for privacy)
   leadingBidderId: {
@@ -104,6 +136,8 @@ auctionSchema.methods.toPublicObject = function() {
   return {
     _id: this._id,
     phoneId: this.phoneId,
+    anonymousSellerId: this.anonymousSellerId,
+    startingBid: this.startingBid,
     currentBid: this.currentBid,
     totalBids: this.totalBids,
     anonymousLeadingBidder: this.anonymousLeadingBidder,
@@ -119,6 +153,9 @@ auctionSchema.methods.toAdminObject = function() {
   return {
     _id: this._id,
     phoneId: this.phoneId,
+    sellerId: this.sellerId,
+    anonymousSellerId: this.anonymousSellerId,
+    startingBid: this.startingBid,
     currentBid: this.currentBid,
     totalBids: this.totalBids,
     leadingBidderId: this.getLeadingBidderId(), // Decrypted
@@ -126,6 +163,7 @@ auctionSchema.methods.toAdminObject = function() {
     auctionEndTime: this.auctionEndTime,
     status: this.status,
     winnerId: this.getWinnerId(), // Decrypted
+    bids: this.bids,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

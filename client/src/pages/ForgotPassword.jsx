@@ -152,7 +152,7 @@ const ForgotPassword = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">🔑</span>
+            <span className="text-white text-2xl font-bold">PB</span>
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             {step === 1 ? 'Forgot Password?' : 'Reset Password'}
@@ -191,9 +191,6 @@ const ForgotPassword = () => {
                   Email address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-400">📧</span>
-                  </div>
                   <input
                     id="email"
                     name="email"
@@ -201,7 +198,7 @@ const ForgotPassword = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -249,26 +246,21 @@ const ForgotPassword = () => {
                   New Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-400">🔒</span>
-                  </div>
                   <input
                     id="newPassword"
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="block w-full px-3 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     placeholder="Enter new password"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-gray-600 hover:text-gray-800"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    <span className="text-gray-400 hover:text-gray-600">
-                      {showPassword ? '🙈' : '👁️'}
-                    </span>
+                    {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
               </div>
@@ -278,16 +270,13 @@ const ForgotPassword = () => {
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-400">🔒</span>
-                  </div>
                   <input
                     id="confirmPassword"
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     placeholder="Confirm new password"
                   />
                 </div>

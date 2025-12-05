@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
+import Footer from '../components/common/Footer';
 
 const ProfessionalHome = () => {
   const navigate = useNavigate();
@@ -18,102 +19,219 @@ const ProfessionalHome = () => {
 
   const loadFeaturedPhones = async () => {
     try {
-      const res = await phoneAPI.getAllPhones({ limit: 6 });
-      setFeaturedPhones(res.data.data.slice(0, 6));
+      const res = await phoneAPI.getAllPhones({ limit: 4 });
+      setFeaturedPhones(res.data.data.slice(0, 4));
     } catch (error) {
       console.error('Error loading featured phones:', error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0a0a0a]">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6">
-              Buy & Sell Phones
-              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Anonymously
-              </span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              The world's first anonymous phone marketplace. Bid on phones without revealing your identity. 
-              Complete privacy protection with secure escrow transactions.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate('/marketplace')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-xl transition transform hover:scale-105"
-              >
-                🔍 Browse Marketplace
-              </button>
-              <button
-                onClick={() => navigate('/auth/signup')}
-                className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-50 transition"
-              >
-                📱 Start Selling
-              </button>
-            </div>
-          </div>
+      <section className="relative bg-[#0a0a0a] py-20 lg:py-32 overflow-hidden">
+        {/* Grid Background Pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `
+              linear-gradient(to right, #1a1a1a 1px, transparent 1px),
+              linear-gradient(to bottom, #1a1a1a 1px, transparent 1px)
+            `,
+            backgroundSize: '40px 40px'
+          }}></div>
         </div>
-      </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-8">
-              <div className="text-4xl font-bold text-blue-600 mb-2">10,000+</div>
-              <div className="text-gray-600">Phones Listed</div>
+        {/* Gradient Glow Effects */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-[#c4ff0d] opacity-10 blur-3xl rounded-full"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#c4ff0d] opacity-10 blur-3xl rounded-full"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-4 py-2 mb-8">
+                <div className="w-2 h-2 bg-[#c4ff0d] rounded-full"></div>
+                <span className="text-gray-400 text-sm">100% Anonymous & Secure</span>
+              </div>
+              
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+                Buy & Sell Phones
+                <span className="block text-[#c4ff0d] mt-2">
+                  Anonymously
+                </span>
+              </h1>
+              
+              <p className="text-lg text-gray-400 mb-8 leading-relaxed">
+                The world's first anonymous phone marketplace. Bid on phones without revealing your identity. 
+                Complete privacy protection with secure escrow transactions.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="bg-[#c4ff0d] text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  Browse Marketplace
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => navigate('/auth/signup')}
+                  className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#2a2a2a] transition"
+                >
+                  Start Selling
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-6 mt-12">
+                <div>
+                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">10,000+</div>
+                  <div className="text-sm text-gray-500">Phones Listed</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">50,000+</div>
+                  <div className="text-sm text-gray-500">Anonymous Users</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">₹2M+</div>
+                  <div className="text-sm text-gray-500">Transactions Completed</div>
+                </div>
+              </div>
             </div>
-            <div className="p-8">
-              <div className="text-4xl font-bold text-purple-600 mb-2">50,000+</div>
-              <div className="text-gray-600">Anonymous Users</div>
-            </div>
-            <div className="p-8">
-              <div className="text-4xl font-bold text-green-600 mb-2">$2M+</div>
-              <div className="text-gray-600">Transactions Completed</div>
+
+            {/* Right Content - Phone Device Mockup */}
+            <div className="relative hidden lg:block">
+              <div className="relative perspective-1000">
+                {/* Floating animation wrapper */}
+                <div className="animate-float">
+                  {/* Phone Device Frame */}
+                  <div className="relative transform-gpu transition-all duration-500 hover:scale-105">
+                    {/* Glow effect behind phone */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-30 blur-3xl rounded-[3rem]"></div>
+                    
+                    {/* Phone Outer Frame */}
+                    <div className="relative w-[340px] h-[680px] bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] rounded-[3rem] p-3 shadow-2xl border border-[#3a3a3a]">
+                      {/* Phone Screen */}
+                      <div className="w-full h-full bg-[#0a0a0a] rounded-[2.5rem] overflow-hidden relative">
+                        {/* Status Bar */}
+                        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#0f0f0f] to-transparent z-10 flex items-center justify-between px-8">
+                          <span className="text-white text-xs">9:41</span>
+                          <div className="flex gap-1">
+                            <div className="w-4 h-4 bg-white rounded-full opacity-80"></div>
+                            <div className="w-4 h-4 bg-white rounded-full opacity-60"></div>
+                            <div className="w-4 h-4 bg-white rounded-full opacity-40"></div>
+                          </div>
+                        </div>
+
+                        {/* Screen Content */}
+                        <div className="p-6 pt-16">
+                          {/* App Header */}
+                          <div className="flex items-center gap-3 mb-8">
+                            <div className="w-12 h-12 bg-[#c4ff0d] rounded-xl flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
+                              <span className="text-black font-bold text-xl">P</span>
+                            </div>
+                            <span className="text-white font-semibold text-lg">PhoneBid</span>
+                          </div>
+                          
+                          {/* Bid Cards */}
+                          <div className="space-y-4">
+                            {[
+                              { label: '₹20k', percent: '32%' },
+                              { label: '₹25k', percent: '45%' },
+                              { label: '₹30k', percent: '23%' }
+                            ].map((item, idx) => (
+                              <div 
+                                key={idx} 
+                                className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4"
+                                style={{
+                                  animation: `slideIn 0.5s ease-out ${idx * 0.15}s both`
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center">
+                                      <svg className="w-5 h-5 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <div className="text-white font-bold text-base">{item.label}</div>
+                                      <div className="text-gray-500 text-xs">Current Bid</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-[#c4ff0d] font-bold text-lg">{item.percent}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Anonymous ID Card */}
+                          <div className="mt-6 bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+                            <div className="text-gray-500 text-xs mb-2">Anonymous ID</div>
+                            <div className="text-white font-mono text-base font-semibold">USER_7X9K...</div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Indicator */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white opacity-40 rounded-full"></div>
+                      </div>
+
+                      {/* Phone Buttons */}
+                      <div className="absolute right-0 top-32 w-1 h-12 bg-[#1a1a1a] rounded-l"></div>
+                      <div className="absolute right-0 top-48 w-1 h-16 bg-[#1a1a1a] rounded-l"></div>
+                      <div className="absolute left-0 top-40 w-1 h-8 bg-[#1a1a1a] rounded-r"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50">
+      <section id="features" className="py-20 bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose PhoneBid?</h2>
-            <p className="text-xl text-gray-600">Complete privacy, secure transactions, and fair pricing</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Why Choose PhoneBid?</h2>
+            <p className="text-lg text-gray-400">Complete privacy, secure transactions, and fair pricing</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-2xl">🔒</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
+              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
+                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Complete Anonymity</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold text-white mb-4">Complete Anonymity</h3>
+              <p className="text-gray-400 leading-relaxed">
                 Your identity is protected with anonymous IDs. Buyers and sellers never see each other's real information.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-2xl">🛡️</span>
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
+              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
+                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Secure Escrow</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold text-white mb-4">Secure Escrow</h3>
+              <p className="text-gray-400 leading-relaxed">
                 Funds are held in escrow until both parties complete the transaction. Full protection for buyers and sellers.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-2xl">⚡</span>
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
+              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
+                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Fair Auctions</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold text-white mb-4">Fair Auctions</h3>
+              <p className="text-gray-400 leading-relaxed">
                 Transparent bidding process with real-time updates. No manipulation, just fair market pricing.
               </p>
             </div>
@@ -122,71 +240,196 @@ const ProfessionalHome = () => {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600">Simple, secure, and anonymous</p>
+      <section id="how-it-works" className="py-20 bg-[#0a0a0a] relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f0f] via-[#0a0a0a] to-[#0a0a0a]"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-20">
+            <div className="text-[#c4ff0d] text-sm font-bold mb-4 tracking-wider uppercase">Getting Started</div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">How It Works</h2>
+            <p className="text-lg text-gray-400">Simple, secure, and anonymous</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white text-2xl font-bold">1</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Sign Up</h3>
-              <p className="text-gray-600">Create your account with email verification. Get your anonymous ID instantly.</p>
-            </div>
+          {/* Steps Container with connecting lines */}
+          <div className="relative">
+            {/* Connecting Line */}
+            <div className="hidden md:block absolute top-16 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#c4ff0d] to-transparent opacity-30" style={{ top: '80px' }}></div>
             
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white text-2xl font-bold">2</span>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+              {/* Step 1 */}
+              <div className="text-center group">
+                <div className="relative inline-block mb-6">
+                  {/* Box Container */}
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                    <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    {/* Number Badge */}
+                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-[#c4ff0d] rounded-full flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
+                      <span className="text-black text-lg font-bold">1</span>
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Sign Up</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  Create your account with email verification. Get your anonymous ID instantly.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">List or Browse</h3>
-              <p className="text-gray-600">List your phone for auction or browse available phones to bid on.</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white text-2xl font-bold">3</span>
+
+              {/* Step 2 */}
+              <div className="text-center group">
+                <div className="relative inline-block mb-6">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-3xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 transition-all duration-300 relative">
+                    <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-[#c4ff0d] rounded-full flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
+                      <span className="text-black text-lg font-bold">2</span>
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-[#c4ff0d] mb-3">List or Browse</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  List your phone for auction or browse available phones to bid on.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Bid & Win</h3>
-              <p className="text-gray-600">Place bids anonymously. Highest bidder wins when the auction ends.</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-20 h-20 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-white text-2xl font-bold">4</span>
+
+              {/* Step 3 */}
+              <div className="text-center group">
+                <div className="relative inline-block mb-6">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                    <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-[#c4ff0d] rounded-full flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
+                      <span className="text-black text-lg font-bold">3</span>
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Bid & Win</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  Place bids anonymously. Highest bidder wins when the auction ends.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Secure Exchange</h3>
-              <p className="text-gray-600">Meet safely, complete the exchange, and funds are released from escrow.</p>
+
+              {/* Step 4 */}
+              <div className="text-center group">
+                <div className="relative inline-block mb-6">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                    <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-[#c4ff0d] rounded-full flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
+                      <span className="text-black text-lg font-bold">4</span>
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Secure Exchange</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  Meet safely, complete the exchange, and funds are released from escrow.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Featured Phones */}
-      <section id="marketplace" className="py-20 bg-gray-50">
+      <section id="marketplace" className="py-20 bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Phones</h2>
-            <p className="text-xl text-gray-600">Latest phones available for bidding</p>
+            <div className="text-[#c4ff0d] text-sm font-semibold mb-4 tracking-wider uppercase">Live Auctions</div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Featured Phones</h2>
+            <p className="text-lg text-gray-400">Latest phones available for bidding</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {featuredPhones.map((phone) => (
-              <div key={phone._id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition">
-                <div className="h-48 bg-gray-200">
-                  {phone.images?.[0] && (
-                    <img src={phone.images[0]} alt={phone.model} className="w-full h-full object-cover" />
+              <div key={phone._id} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl overflow-hidden hover:border-[#c4ff0d] transition-all duration-300 group cursor-pointer transform hover:scale-105">
+                {/* Image Section */}
+                <div className="relative h-56 bg-[#0f0f0f] overflow-hidden">
+                  {phone.images?.[0] ? (
+                    <img src={phone.images[0]} alt={phone.model} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-20 h-20 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   )}
+                  
+                  {/* Timer Badge - Top Left */}
+                  <div className="absolute top-3 left-3">
+                    <div className="bg-black bg-opacity-70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      <span>2h 45m</span>
+                    </div>
+                  </div>
+
+                  {/* Condition Badge - Top Right */}
+                  <div className="absolute top-3 right-3">
+                    {phone.condition === 'Excellent' ? (
+                      <span className="bg-[#00d4aa] text-white text-xs font-bold px-3 py-1 rounded-full">
+                        Excellent
+                      </span>
+                    ) : phone.condition === 'Good' ? (
+                      <span className="bg-[#c4ff0d] text-black text-xs font-bold px-3 py-1 rounded-full">
+                        Good
+                      </span>
+                    ) : (
+                      <span className="bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">
+                        Fair
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bid Now Button - Appears on Hover */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/phone/${phone._id}`);
+                      }}
+                      className="w-full bg-[#c4ff0d] text-black py-2 px-4 rounded-lg font-semibold hover:bg-[#d4ff3d] transition flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      Bid Now
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{phone.brand} {phone.model}</h3>
-                  <p className="text-gray-600 mb-4">{phone.storage} • {phone.condition}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold text-blue-600">₹{phone.minBidPrice}</span>
-                    <span className="text-sm text-gray-500">by {phone.anonymousSellerId}</span>
+
+                {/* Content Section */}
+                <div className="p-5">
+                  {/* Brand and Model */}
+                  <div className="mb-3">
+                    <p className="text-gray-400 text-xs mb-1">{phone.brand}</p>
+                    <h3 className="text-lg font-bold text-white">{phone.model}</h3>
+                    <p className="text-gray-500 text-sm">{phone.storage}</p>
+                  </div>
+
+                  {/* Current Bid Section */}
+                  <div className="mb-4">
+                    <div className="text-xs text-gray-500 mb-1">Current Bid</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-[#c4ff0d]">₹{phone.minBidPrice?.toLocaleString()}</span>
+                      <div className="flex items-center gap-1 text-gray-400 text-xs">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                        <span>12 bids</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seller Info */}
+                  <div className="pt-3 border-t border-[#2a2a2a]">
+                    <div className="text-xs text-gray-500 mb-1">by</div>
+                    <span className="text-xs text-gray-400 font-mono">{phone.anonymousSellerId?.substring(0, 15)}...</span>
                   </div>
                 </div>
               </div>
@@ -196,7 +439,7 @@ const ProfessionalHome = () => {
           <div className="text-center mt-12">
             <button
               onClick={() => navigate('/marketplace')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-xl transition transform hover:scale-105"
+              className="bg-[#c4ff0d] text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105"
             >
               View All Phones
             </button>
@@ -204,66 +447,56 @@ const ProfessionalHome = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">Ready to Start?</h2>
-          <p className="text-xl text-blue-100 mb-8">Join thousands of users buying and selling phones anonymously</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => navigate('/auth/signup')}
-              className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-xl transition transform hover:scale-105"
-            >
-              Sign Up Free
-            </button>
-            <button
-              onClick={() => navigate('/marketplace')}
-              className="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white hover:text-blue-600 transition"
-            >
-              Browse Now
-            </button>
+      {/* CTA Section with 3D Card */}
+      <section className="py-20 bg-[#0a0a0a] relative overflow-hidden">
+        {/* Background gradient glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#c4ff0d]/10 via-transparent to-transparent"></div>
+        
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* 3D Floating Card */}
+          <div className="relative">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-30 blur-3xl rounded-3xl"></div>
+            
+            {/* Main CTA Card */}
+            <div className="relative bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] border border-[#3a3a3a] rounded-3xl p-12 text-center transform transition-all duration-500 hover:scale-105 hover:border-[#c4ff0d]/50 shadow-2xl">
+              {/* Join Today badge */}
+              <div className="inline-flex items-center gap-2 bg-[#c4ff0d] bg-opacity-20 border border-[#c4ff0d] rounded-full px-4 py-2 mb-6">
+                <svg className="w-4 h-4 text-[#c4ff0d]" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <span className="text-[#c4ff0d] text-sm font-semibold">Join Today</span>
+              </div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Ready to Start?</h2>
+              <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
+                Join thousands of users buying and selling phones anonymously
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => navigate('/auth/signup')}
+                  className="bg-[#c4ff0d] text-black px-8 py-4 rounded-xl text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105 shadow-lg shadow-[#c4ff0d]/30 flex items-center justify-center gap-2"
+                >
+                  Sign Up Free
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="bg-transparent border-2 border-[#c4ff0d] text-[#c4ff0d] px-8 py-4 rounded-xl text-lg font-semibold hover:bg-[#c4ff0d] hover:text-black transition"
+                >
+                  Browse Now
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-2xl font-bold mb-4">📱 PhoneBid</h3>
-              <p className="text-gray-400">The world's first anonymous phone marketplace.</p>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition">How it Works</a></li>
-                <li><a href="#" className="hover:text-white transition">Security</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition">FAQ</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition">Cookie Policy</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 PhoneBid Marketplace. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

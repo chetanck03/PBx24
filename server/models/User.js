@@ -40,6 +40,28 @@ const userSchema = new mongoose.Schema({
     type: String, // Stored encrypted
     default: ''
   },
+  // Government ID proof (required for new registrations)
+  governmentIdProof: {
+    type: String, // URL or base64 encoded image
+    default: ''
+  },
+  governmentIdType: {
+    type: String,
+    enum: ['Aadhaar', 'PAN', 'Passport', 'Driving License', ''],
+    default: ''
+  },
+  governmentIdNumber: {
+    type: String, // Stored encrypted
+    default: ''
+  },
+  phoneNumber: {
+    type: String,
+    default: ''
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
   // Wallet and verification
   walletBalance: {
     type: Number,
@@ -145,6 +167,8 @@ userSchema.methods.toFullObject = function() {
     kycStatus: this.kycStatus,
     isActive: this.isActive,
     isBanned: this.isBanned,
+    governmentIdProof: this.governmentIdProof,
+    governmentIdType: this.governmentIdType,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };
