@@ -266,9 +266,104 @@ export const sendBidAcceptanceEmail = async (email, name, phoneDetails, bidAmoun
   }
 };
 
+/**
+ * Send bid acceptance notification email to SELLER
+ */
+export const sendBidAcceptanceEmailToSeller = async (email, name, phoneDetails, bidAmount, buyerAnonymousId) => {
+  const dashboardUrl = `${process.env.CLIENT_URL}/dashboard`;
+  
+  const mailOptions = {
+    from: `"PhoneBid Marketplace" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Your Phone Has Been Sold! - PhoneBid',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #c4ff0d 0%, #a3e635 100%); color: #1a1a1a; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .highlight-box { background: white; border-left: 4px solid #c4ff0d; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .price { font-size: 32px; font-weight: bold; color: #16a34a; }
+          .info-box { background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 5px; }
+          .button { display: inline-block; padding: 12px 30px; background: #1a1a1a; color: #c4ff0d; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
+          ul { padding-left: 20px; }
+          li { margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Your Phone Has Been Sold!</h1>
+            <p style="font-size: 18px; margin: 10px 0;">Congratulations on your successful sale</p>
+          </div>
+          <div class="content">
+            <p>Hello <strong>${name}</strong>,</p>
+            
+            <p>Great news! You have successfully accepted a bid and sold your phone on PhoneBid Marketplace.</p>
+            
+            <div class="highlight-box">
+              <h3 style="margin-top: 0; color: #16a34a;">Phone Sold</h3>
+              <p><strong>Phone:</strong> ${phoneDetails.brand} ${phoneDetails.model}</p>
+              <p><strong>Storage:</strong> ${phoneDetails.storage}</p>
+              <p><strong>Condition:</strong> ${phoneDetails.condition}</p>
+              <p><strong>Sold For:</strong></p>
+              <div class="price">Rs. ${bidAmount.toLocaleString()}</div>
+              <p style="margin-top: 10px;"><strong>Buyer ID:</strong> ${buyerAnonymousId}</p>
+            </div>
+            
+            <div class="info-box">
+              <h3 style="margin-top: 0; color: #10b981;">What Happens Next</h3>
+              <p>The buyer has been notified and will pay an initial deposit of Rs. 2,000 to the admin within 24 hours.</p>
+            </div>
+            
+            <h3>Next Steps:</h3>
+            <ul>
+              <li><strong>Step 1:</strong> Wait for buyer's deposit confirmation from admin</li>
+              <li><strong>Step 2:</strong> Admin will coordinate the phone inspection</li>
+              <li><strong>Step 3:</strong> After successful inspection, buyer completes payment</li>
+              <li><strong>Step 4:</strong> You'll receive your payment (minus platform fees)</li>
+            </ul>
+            
+            <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
+            
+            <p><strong>Important Notes:</strong></p>
+            <ul>
+              <li>Keep your phone in the same condition as listed</li>
+              <li>Be available for the inspection process</li>
+              <li>Admin will contact you with further instructions</li>
+            </ul>
+            
+            <p>Thank you for selling on PhoneBid Marketplace!</p>
+            
+            <p>Best regards,<br><strong>PhoneBid Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>2024 PhoneBid Marketplace. All rights reserved.</p>
+            <p>This is an automated email. For support, please contact admin through the platform.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error('Seller bid acceptance email error:', error);
+    throw new Error('Failed to send seller notification email');
+  }
+};
+
 export default {
   sendOTPEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
-  sendBidAcceptanceEmail
+  sendBidAcceptanceEmail,
+  sendBidAcceptanceEmailToSeller
 };

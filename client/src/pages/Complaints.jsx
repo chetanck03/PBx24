@@ -308,13 +308,13 @@ const Complaints = () => {
                         className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#2a2a2a] text-white rounded-xl focus:border-[#c4ff0d] focus:outline-none transition"
                         required
                       >
-                        <option value="bidding">🔨 Bidding Issue</option>
-                        <option value="payment">💳 Payment Issue</option>
-                        <option value="phone_quality">📱 Phone Quality</option>
-                        <option value="seller_issue">👤 Seller Issue</option>
-                        <option value="buyer_issue">🛒 Buyer Issue</option>
-                        <option value="technical">⚙️ Technical Issue</option>
-                        <option value="other">📝 Other</option>
+                        <option value="bidding">Bidding Issue</option>
+                        <option value="payment">Payment Issue</option>
+                        <option value="phone_quality">Phone Quality</option>
+                        <option value="seller_issue">Seller Issue</option>
+                        <option value="buyer_issue">Buyer Issue</option>
+                        <option value="technical">Technical Issue</option>
+                        <option value="other">Other</option>
                       </select>
                     </div>
                   </div>

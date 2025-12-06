@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { reelAPI } from '../../services/reelService';
 import { useAuth } from '../../context/AuthContext';
-import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share2, Loader2, X, Send, Trash2 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share2, Loader2, X, Send, Trash2, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ReelsFeed = () => {
@@ -116,6 +116,9 @@ const ReelsFeed = () => {
   );
 };
 
+// Track viewed reels in session to prevent duplicate views
+const viewedReelsInSession = new Set();
+
 const ReelItem = ({ reel, isActive, onUpdate }) => {
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
@@ -127,6 +130,8 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   const [commentsCount, setCommentsCount] = useState(reel.comments?.length || 0);
   const [showComments, setShowComments] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [viewCount, setViewCount] = useState(reel.views || 0);
+  const viewTrackedRef = useRef(false);
 
   useEffect(() => {
     // Check if user has liked this reel
@@ -134,6 +139,24 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
       setLiked(reel.likes.includes(user._id));
     }
   }, [isAuthenticated, user, reel.likes]);
+
+  // Track view when reel becomes active - only once per session per reel
+  useEffect(() => {
+    if (isActive && !viewTrackedRef.current && !viewedReelsInSession.has(reel._id)) {
+      viewTrackedRef.current = true;
+      viewedReelsInSession.add(reel._id);
+      
+      // Increment view count in database
+      reelAPI.incrementView(reel._id)
+        .then(response => {
+          if (response.data.data?.views) {
+            setViewCount(response.data.data.views);
+            onUpdate({ views: response.data.data.views });
+          }
+        })
+        .catch(err => console.error('Error tracking view:', err));
+    }
+  }, [isActive, reel._id, onUpdate]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -276,6 +299,14 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
             <Share2 className="w-6 h-6" />
           </div>
         </button>
+
+        {/* View count */}
+        <div className="flex flex-col items-center gap-1 text-white">
+          <div className="p-3 rounded-full bg-black/50">
+            <Eye className="w-6 h-6" />
+          </div>
+          <span className="text-xs font-medium">{viewCount}</span>
+        </div>
       </div>
 
       {/* Bottom info */}

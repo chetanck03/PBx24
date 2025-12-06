@@ -1,9 +1,12 @@
 
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useState, useRef, useEffect } from 'react';
+import { reelAPI } from './services/api';
+import { X, Upload, Loader2 } from 'lucide-react';
 
 // Pages
 import Home from './pages/Home';
@@ -27,12 +30,31 @@ import Complaints from './pages/Complaints';
 import Reels from './pages/Reels';
 import Chatbot from './components/chatbot/Chatbot';
 
+// Static Pages
+import HowItWorks from './pages/HowItWorks';
+import Security from './pages/Security';
+import Privacy from './pages/Privacy';
+import HelpCenter from './pages/HelpCenter';
+import ContactUs from './pages/ContactUs';
+import FAQ from './pages/FAQ';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Blog from './pages/Blog';
+import BlogDetail from './pages/BlogDetail';
+
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [reelDescription, setReelDescription] = useState('');
+  const [videoDuration, setVideoDuration] = useState(0);
   const dropdownRef = useRef(null);
+  const fileInputRef = useRef(null);
   
   // Pages that should not show the navbar (only auth pages)
   const noNavbarPages = ['/auth/signin', '/auth/signup', '/auth/forgot-password'];
@@ -42,6 +64,87 @@ function AppContent() {
     logout();
     navigate('/');
     setShowProfileDropdown(false);
+  };
+
+  // Upload Reel Functions
+  const handleUploadClick = () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to upload reels');
+      navigate('/auth/signin');
+      return;
+    }
+    setShowUploadModal(true);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      toast.error('Please select a video file');
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Video size must be less than 50MB');
+      return;
+    }
+
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      if (video.duration > 30) {
+        toast.error('Video must be 30 seconds or less');
+        return;
+      }
+      setVideoDuration(video.duration);
+      setSelectedVideo(file);
+    };
+    video.src = URL.createObjectURL(file);
+  };
+
+  const handleUploadReel = async () => {
+    if (!selectedVideo) {
+      toast.error('Please select a video');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('video', selectedVideo);
+      formData.append('description', reelDescription);
+      formData.append('duration', videoDuration);
+
+      await reelAPI.uploadReel(formData, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress(progress);
+      });
+
+      toast.success('Reel uploaded successfully!');
+      closeUploadModal();
+      if (location.pathname === '/reels') {
+        window.location.reload();
+      } else {
+        navigate('/reels');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to upload reel');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const closeUploadModal = () => {
+    if (!uploading) {
+      setShowUploadModal(false);
+      setSelectedVideo(null);
+      setReelDescription('');
+      setUploadProgress(0);
+      setVideoDuration(0);
+    }
   };
 
   // Close dropdown when clicking outside
@@ -90,12 +193,36 @@ function AppContent() {
                 <div className="hidden md:flex items-center gap-1">
                   {!isAuthenticated ? (
                     <>
-                      <a href="#features" className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]">
+                      <button
+                        onClick={() => {
+                          if (window.location.pathname !== '/') {
+                            navigate('/');
+                            setTimeout(() => {
+                              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          } else {
+                            document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
+                      >
                         Features
-                      </a>
-                      <a href="#how-it-works" className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]">
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.location.pathname !== '/') {
+                            navigate('/');
+                            setTimeout(() => {
+                              document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 100);
+                          } else {
+                            document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
+                      >
                         How It Works
-                      </a>
+                      </button>
                       <button
                         onClick={() => navigate('/marketplace')}
                         className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
@@ -116,6 +243,15 @@ function AppContent() {
                         className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
                       >
                         Sell Phone
+                      </button>
+                      <button
+                        onClick={handleUploadClick}
+                        className="w-9 h-9 bg-[#c4ff0d] rounded-full flex items-center justify-center hover:bg-[#d4ff3d] transition transform hover:scale-110 shadow-lg shadow-[#c4ff0d]/30"
+                        title="Upload Reel"
+                      >
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
                       </button>
                       <button
                         onClick={() => navigate('/reels')}
@@ -347,6 +483,14 @@ function AppContent() {
                   {isAuthenticated ? (
                     <>
                       <button onClick={() => { navigate('/create-listing'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Sell Phone</button>
+                      <button onClick={() => { handleUploadClick(); setMobileNavOpen(false); }} className="w-full flex items-center gap-3 text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">
+                        <div className="w-8 h-8 bg-[#c4ff0d] rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                          </svg>
+                        </div>
+                        <span>Upload Reel</span>
+                      </button>
                       <button onClick={() => { navigate('/reels'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Reels</button>
                       <button onClick={() => { navigate('/dashboard'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Dashboard</button>
                       <button onClick={() => { navigate('/profile'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Profile</button>
@@ -355,6 +499,24 @@ function AppContent() {
                     </>
                   ) : (
                     <>
+                      <button onClick={() => { 
+                        setMobileNavOpen(false);
+                        if (window.location.pathname !== '/') {
+                          navigate('/');
+                          setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 100);
+                        } else {
+                          document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Features</button>
+                      <button onClick={() => { 
+                        setMobileNavOpen(false);
+                        if (window.location.pathname !== '/') {
+                          navigate('/');
+                          setTimeout(() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }), 100);
+                        } else {
+                          document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">How It Works</button>
                       <button onClick={() => { navigate('/auth/signin'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Sign In</button>
                       <button onClick={() => { navigate('/auth/signup'); setMobileNavOpen(false); }} className="w-full bg-[#c4ff0d] text-black px-4 py-3 rounded-lg font-semibold">Get Started</button>
                     </>
@@ -429,6 +591,18 @@ function AppContent() {
               {/* Reels Route */}
               <Route path="/reels" element={<Reels />} />
 
+              {/* Static Pages */}
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/help" element={<HelpCenter />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:id" element={<BlogDetail />} />
+
               {/* Complaints Route */}
               <Route 
                 path="/complaints" 
@@ -462,6 +636,120 @@ function AppContent() {
           <Toaster position="top-right" />
           {/* Hide chatbot on reels page */}
           {location.pathname !== '/reels' && <Chatbot />}
+
+          {/* Upload Reel Modal */}
+          {showUploadModal && (
+            <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+              <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl w-full max-w-md p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Upload Reel</h2>
+                  <button 
+                    onClick={closeUploadModal}
+                    disabled={uploading}
+                    className="p-2 hover:bg-[#1a1a1a] rounded-full disabled:opacity-50"
+                  >
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+
+                {/* Upload Area */}
+                {!selectedVideo ? (
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-[#2a2a2a] rounded-xl p-8 text-center cursor-pointer hover:border-[#c4ff0d] transition"
+                  >
+                    <Upload className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-white font-medium mb-2">Click to select video</p>
+                    <p className="text-gray-500 text-sm">Max 30 seconds, up to 50MB</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Video Preview */}
+                    <div className="bg-[#1a1a1a] rounded-xl p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-16 h-16 bg-[#2a2a2a] rounded-lg flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-[#c4ff0d]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">{selectedVideo.name}</p>
+                          <p className="text-gray-500 text-sm">
+                            {(selectedVideo.size / (1024 * 1024)).toFixed(2)} MB - {videoDuration.toFixed(1)}s
+                          </p>
+                        </div>
+                        {!uploading && (
+                          <button 
+                            onClick={() => setSelectedVideo(null)}
+                            className="p-2 hover:bg-[#2a2a2a] rounded-full"
+                          >
+                            <X className="w-4 h-4 text-gray-400" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Description (optional)</label>
+                      <textarea
+                        value={reelDescription}
+                        onChange={(e) => setReelDescription(e.target.value)}
+                        placeholder="Add a description..."
+                        maxLength={500}
+                        disabled={uploading}
+                        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d] resize-none h-24 disabled:opacity-50"
+                      />
+                      <p className="text-gray-500 text-xs mt-1 text-right">{reelDescription.length}/500</p>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {uploading && (
+                      <div className="space-y-2">
+                        <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-[#c4ff0d] transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-center text-gray-400 text-sm">Uploading... {uploadProgress}%</p>
+                      </div>
+                    )}
+
+                    {/* Upload Button */}
+                    <button
+                      onClick={handleUploadReel}
+                      disabled={uploading}
+                      className="w-full bg-[#c4ff0d] text-black py-3 rounded-xl font-semibold hover:bg-[#d4ff3d] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5" />
+                          Upload Reel
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Info */}
+                <p className="text-gray-500 text-xs text-center mt-4">
+                  Videos must be 30 seconds or less
+                </p>
+              </div>
+            </div>
+          )}
         </div>
   );
 }

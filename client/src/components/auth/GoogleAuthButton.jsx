@@ -78,7 +78,7 @@ const GoogleAuthButton = () => {
           size: 'large',
           width: buttonRef.current.offsetWidth || 300,
           text: 'continue_with',
-          shape: 'rectangular'
+          shape: 'pill'
         });
         setButtonRendered(true);
       } catch (error) {
@@ -145,14 +145,14 @@ const GoogleAuthButton = () => {
   return (
     <div className="w-full">
       {loading && (
-        <div className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white">
+        <div className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-full shadow-sm bg-white">
           <LoadingSpinner size="sm" />
           <span className="ml-2 text-sm text-gray-600">Signing in...</span>
         </div>
       )}
       
       {!loading && !googleLoaded && (
-        <div className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white">
+        <div className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-full shadow-sm bg-white">
           <div className="w-5 h-5 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
           <span className="text-sm text-gray-600">Loading Google...</span>
         </div>
@@ -161,7 +161,7 @@ const GoogleAuthButton = () => {
       {!loading && googleLoaded && !buttonRendered && (
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-full shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
             <path
@@ -188,7 +188,7 @@ const GoogleAuthButton = () => {
       {/* Google will render its button here */}
       <div 
         ref={buttonRef} 
-        className={`w-full ${buttonRendered ? '' : 'hidden'}`}
+        className={`w-full flex justify-center ${buttonRendered ? '' : 'hidden'}`}
         style={{ minHeight: buttonRendered ? 'auto' : '0' }}
       />
     </div>

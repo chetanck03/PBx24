@@ -34,7 +34,17 @@ const EnhancedMarketplace = () => {
   const conditions = ['Excellent', 'Good', 'Fair', 'Poor'];
   const storageOptions = ['64GB', '128GB', '256GB', '512GB', '1TB'];
   const ramOptions = ['4GB', '6GB', '8GB', '12GB', '16GB'];
-  const locations = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad'];
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+    'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Delhi', 'Chandigarh', 'Puducherry'
+  ];
+  const [selectedState, setSelectedState] = useState('');
+  const [cityInput, setCityInput] = useState('');
   const navigate = useNavigate();
 
   // Load phones only on initial mount
@@ -94,6 +104,8 @@ const EnhancedMarketplace = () => {
     setShowBrandDropdown(false);
     setShowTechnicalDropdown(false);
     setShowLocationDropdown(false);
+    setSelectedState('');
+    setCityInput('');
   };
 
   const getActiveFilterCount = () => {
@@ -238,8 +250,8 @@ const EnhancedMarketplace = () => {
                   )}
                   {filters.location && (
                     <span className="bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                      📍 {filters.location}
-                      <button onClick={() => handleFilterChange('location', '')} className="text-gray-500 hover:text-white">×</button>
+                      {filters.location}
+                      <button onClick={() => { handleFilterChange('location', ''); setSelectedState(''); setCityInput(''); }} className="text-gray-500 hover:text-white">×</button>
                     </span>
                   )}
                 </div>
@@ -406,30 +418,48 @@ const EnhancedMarketplace = () => {
                 {/* Location */}
                 <div className="mb-6">
                   <label className="text-white font-semibold mb-3 block">Location</label>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                      className="w-full flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-3 hover:border-[#c4ff0d] transition"
-                    >
-                      <span className="text-gray-300 text-sm">{filters.location || 'Select Location'}</span>
-                      <div className={`w-12 h-6 rounded-full relative transition ${filters.location ? 'bg-[#c4ff0d]' : 'bg-[#2a2a2a]'}`}>
-                        <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${filters.location ? 'right-1 bg-black' : 'left-1 bg-gray-600'}`}></div>
-                      </div>
-                    </button>
-                    {showLocationDropdown && (
-                      <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto">
-                        {locations.map(location => (
-                          <button
-                            key={location}
-                            onClick={() => {
-                              handleFilterChange('location', location);
-                              setShowLocationDropdown(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-gray-300 hover:bg-[#2a2a2a] hover:text-[#c4ff0d] transition text-sm"
-                          >
-                            📍 {location}
-                          </button>
-                        ))}
+                  <div className="space-y-3">
+                    {/* State Dropdown */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                        className="w-full flex items-center justify-between bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-3 hover:border-[#c4ff0d] transition"
+                      >
+                        <span className="text-gray-300 text-sm">{selectedState || 'Select State'}</span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showLocationDropdown && (
+                        <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto">
+                          {indianStates.map(state => (
+                            <button
+                              key={state}
+                              onClick={() => {
+                                setSelectedState(state);
+                                setShowLocationDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-gray-300 hover:bg-[#2a2a2a] hover:text-[#c4ff0d] transition text-sm"
+                            >
+                              {state}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* City Input - Shows after state is selected */}
+                    {selectedState && (
+                      <div>
+                        <input
+                          type="text"
+                          value={cityInput}
+                          onChange={(e) => {
+                            setCityInput(e.target.value);
+                            handleFilterChange('location', e.target.value ? `${e.target.value}, ${selectedState}` : selectedState);
+                          }}
+                          placeholder="Enter city name"
+                          className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d]"
+                        />
                       </div>
                     )}
                   </div>
@@ -467,17 +497,9 @@ const EnhancedMarketplace = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h1 className="text-3xl font-bold text-white mb-2">
-                    Phones Matching Your Search ({phones.length})
+                    Available Phones ({phones.length})
                   </h1>
-                  <p className="text-gray-400">Sort for Teams Users</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button className="text-gray-400 hover:text-white">
-                    Sort By
-                    <svg className="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                  <p className="text-gray-400">Browse and bid on phones</p>
                 </div>
               </div>
             </div>

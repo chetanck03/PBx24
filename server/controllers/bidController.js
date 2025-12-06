@@ -2,7 +2,7 @@ import Bid from '../models/Bid.js';
 import Auction from '../models/Auction.js';
 import Phone from '../models/Phone.js';
 import User from '../models/User.js';
-import { sendBidAcceptanceEmail } from '../services/emailService.js';
+import { sendBidAcceptanceEmail, sendBidAcceptanceEmailToSeller } from '../services/emailService.js';
 
 /**
  * Place a bid on an auction
@@ -385,33 +385,52 @@ export const acceptBid = async (req, res) => {
       { isWinning: false }
     );
     
-    // Send email notification to winner
+    // Get seller details
+    const seller = await User.findById(phone.sellerId);
+    
+    const phoneDetails = {
+      brand: phone.brand,
+      model: phone.model,
+      storage: phone.storage,
+      condition: phone.condition
+    };
+    
+    // Send email notification to winner (buyer)
     if (winner && winner.email) {
       try {
-        const phoneDetails = {
-          brand: phone.brand,
-          model: phone.model,
-          storage: phone.storage,
-          condition: phone.condition
-        };
-        
         await sendBidAcceptanceEmail(
           winner.email,
           winner.name,
           phoneDetails,
           bid.bidAmount
         );
-        
-        console.log(`✅ Bid acceptance email sent to ${winner.email}`);
+        console.log(`Bid acceptance email sent to buyer: ${winner.email}`);
       } catch (emailError) {
-        console.error('Failed to send bid acceptance email:', emailError);
+        console.error('Failed to send bid acceptance email to buyer:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+    
+    // Send email notification to seller
+    if (seller && seller.email) {
+      try {
+        await sendBidAcceptanceEmailToSeller(
+          seller.email,
+          seller.name,
+          phoneDetails,
+          bid.bidAmount,
+          winner?.anonymousId || bid.anonymousBidderId
+        );
+        console.log(`Sale confirmation email sent to seller: ${seller.email}`);
+      } catch (emailError) {
+        console.error('Failed to send sale confirmation email to seller:', emailError);
         // Don't fail the request if email fails
       }
     }
     
     res.json({
       success: true,
-      message: 'Bid accepted successfully. Auction ended. Winner has been notified via email.',
+      message: 'Bid accepted successfully. Auction ended. Both buyer and seller have been notified via email.',
       data: {
         auction: auction.toPublicObject(),
         winningBid: bid.toPublicObject()

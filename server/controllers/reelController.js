@@ -168,6 +168,37 @@ export const getReelById = async (req, res) => {
   }
 };
 
+// Increment view count for a reel (called when reel is actually watched)
+export const incrementReelView = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reel = await Reel.findById(id);
+
+    if (!reel) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Reel not found' }
+      });
+    }
+
+    // Increment view count
+    reel.views = (reel.views || 0) + 1;
+    await reel.save();
+
+    res.json({
+      success: true,
+      data: { views: reel.views }
+    });
+  } catch (error) {
+    console.error('Error incrementing view:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to increment view' }
+    });
+  }
+};
+
 // Delete a reel
 export const deleteReel = async (req, res) => {
   try {
@@ -470,6 +501,42 @@ export const checkLikeStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       error: { message: 'Failed to check like status' }
+    });
+  }
+};
+
+// Get user reel statistics (total views, likes, etc.)
+export const getUserReelStats = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const reels = await Reel.find({ userId, isActive: true });
+
+    const stats = {
+      totalReels: reels.length,
+      totalViews: reels.reduce((sum, reel) => sum + (reel.views || 0), 0),
+      totalLikes: reels.reduce((sum, reel) => sum + (reel.likes?.length || 0), 0),
+      totalComments: reels.reduce((sum, reel) => sum + (reel.comments?.length || 0), 0),
+      reels: reels.map(reel => ({
+        _id: reel._id,
+        thumbnailUrl: reel.thumbnailUrl,
+        videoUrl: reel.videoUrl,
+        views: reel.views || 0,
+        likes: reel.likes?.length || 0,
+        comments: reel.comments?.length || 0,
+        createdAt: reel.createdAt
+      }))
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching user reel stats:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to fetch user reel statistics' }
     });
   }
 };

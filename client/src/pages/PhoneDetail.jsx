@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { phoneAPI, auctionAPI, bidAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Footer from '../components/common/Footer';
-import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, Trophy } from 'lucide-react';
+import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, Trophy, LogIn, Gavel, AlertTriangle } from 'lucide-react';
 
 const PhoneDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const [phone, setPhone] = useState(null);
   const [auction, setAuction] = useState(null);
   const [bids, setBids] = useState([]);
@@ -16,6 +18,9 @@ const PhoneDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [selectedBidToAccept, setSelectedBidToAccept] = useState(null);
+  const [acceptingBid, setAcceptingBid] = useState(false);
 
   useEffect(() => {
     loadPhoneDetails();
@@ -88,6 +93,39 @@ const PhoneDetail = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Check if current user is the seller
+  const isOwner = isAuthenticated && user && phone && 
+    (user.anonymousId === phone.anonymousSellerId || user._id === phone.sellerId);
+
+  // Handle accept bid
+  const handleAcceptBid = async () => {
+    if (!selectedBidToAccept) return;
+    
+    try {
+      setAcceptingBid(true);
+      await bidAPI.acceptBid(selectedBidToAccept._id);
+      setShowAcceptModal(false);
+      setSelectedBidToAccept(null);
+      setSuccess('Bid accepted successfully! Confirmation emails have been sent to both parties.');
+      
+      // Reload phone details to reflect the sold status
+      setTimeout(() => {
+        loadPhoneDetails();
+      }, 2000);
+    } catch (error) {
+      console.error('Error accepting bid:', error);
+      setError(error.response?.data?.error?.message || 'Failed to accept bid');
+      setShowAcceptModal(false);
+    } finally {
+      setAcceptingBid(false);
+    }
+  };
+
+  const openAcceptModal = (bid) => {
+    setSelectedBidToAccept(bid);
+    setShowAcceptModal(true);
   };
 
   // Live countdown timer
@@ -252,9 +290,14 @@ const PhoneDetail = () => {
               <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-white">Auction Details</h2>
-                  {auction.status === 'active' && !timeRemaining.ended && (
+                  {(auction.status === 'active' || !timeRemaining.ended) && (
                     <span className="bg-[#c4ff0d] text-black text-xs font-bold px-3 py-1 rounded">
                       LIVE
+                    </span>
+                  )}
+                  {timeRemaining.ended && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded">
+                      ENDED
                     </span>
                   )}
                 </div>
@@ -273,7 +316,7 @@ const PhoneDetail = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Total Bids:</p>
-                    <p className="text-white font-semibold">{auction.totalBids}</p>
+                    <p className="text-white font-semibold">{auction.totalBids || 0}</p>
                   </div>
                 </div>
 
@@ -299,42 +342,116 @@ const PhoneDetail = () => {
                   )}
                 </div>
 
-                {/* Bid Form */}
-                {auction.status === 'active' && !timeRemaining.ended && (
-                  <form onSubmit={handlePlaceBid} className="space-y-4">
-                    <div className="flex gap-3">
-                      <div className="flex-1 relative">
-                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">₹</span>
-                        <input
-                          type="number"
-                          value={bidAmount}
-                          onChange={(e) => setBidAmount(e.target.value)}
-                          placeholder="Your Bid Amount"
-                          className="w-full pl-8 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#c4ff0d] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#c4ff0d] transition"
-                          required
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="px-8 py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {submitting ? 'Placing...' : 'Place Bid'}
-                      </button>
-                    </div>
+                {/* Bid Form - Show for active auctions */}
+                {!timeRemaining.ended && (
+                  <>
+                    {isAuthenticated ? (
+                      <form onSubmit={handlePlaceBid} className="space-y-4">
+                        <div className="flex gap-3">
+                          <div className="flex-1 relative">
+                            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">₹</span>
+                            <input
+                              type="number"
+                              value={bidAmount}
+                              onChange={(e) => setBidAmount(e.target.value)}
+                              placeholder={`Min: ₹${(Math.max(auction.currentBid || 0, phone.minBidPrice) + 1).toLocaleString()}`}
+                              className="w-full pl-8 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#c4ff0d] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#c4ff0d] transition"
+                              required
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={submitting}
+                            className="px-8 py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {submitting ? 'Placing...' : 'Place Bid'}
+                          </button>
+                        </div>
 
-                    {error && (
-                      <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
-                        <p className="text-sm text-red-400">{error}</p>
+                        {error && (
+                          <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
+                            <p className="text-sm text-red-400">{error}</p>
+                          </div>
+                        )}
+
+                        {success && (
+                          <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-xl">
+                            <p className="text-sm text-green-400">{success}</p>
+                          </div>
+                        )}
+                      </form>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-center">
+                          <LogIn className="w-8 h-8 text-[#c4ff0d] mx-auto mb-3" />
+                          <p className="text-white font-medium mb-2">Login to Place a Bid</p>
+                          <p className="text-gray-400 text-sm mb-4">You need to be logged in to participate in this auction</p>
+                          <button
+                            onClick={() => navigate('/auth/signin')}
+                            className="w-full py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition flex items-center justify-center gap-2"
+                          >
+                            <LogIn className="w-5 h-5" />
+                            Sign In to Bid
+                          </button>
+                          <p className="text-gray-500 text-xs mt-3">
+                            Don't have an account?{' '}
+                            <button 
+                              onClick={() => navigate('/auth/signup')}
+                              className="text-[#c4ff0d] hover:underline"
+                            >
+                              Sign up for free
+                            </button>
+                          </p>
+                        </div>
                       </div>
                     )}
+                  </>
+                )}
+              </div>
+            )}
 
-                    {success && (
-                      <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-xl">
-                        <p className="text-sm text-green-400">{success}</p>
-                      </div>
-                    )}
-                  </form>
+            {/* Bidding Section - Show when no auction exists */}
+            {!auction && (
+              <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
+                <h2 className="text-xl font-bold text-white mb-4">
+                  {phone.status === 'pending' ? 'Auction Pending' : 'Place Your Bid'}
+                </h2>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-400 mb-1">Starting Price:</p>
+                  <p className="text-4xl font-bold text-[#c4ff0d]">
+                    ₹{phone.minBidPrice?.toLocaleString()}
+                  </p>
+                </div>
+                
+                {phone.status === 'pending' ? (
+                  <p className="text-gray-400 text-sm">
+                    This phone is awaiting admin verification. Bidding will start once approved.
+                  </p>
+                ) : phone.status === 'live' ? (
+                  <>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Auction is being set up. Please refresh to check status.
+                    </p>
+                    <button
+                      onClick={loadPhoneDetails}
+                      className="w-full py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition"
+                    >
+                      Refresh Auction Status
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-yellow-400 text-sm mb-2">Status: {phone.status}</p>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Auction may not be available for this listing.
+                    </p>
+                    <button
+                      onClick={loadPhoneDetails}
+                      className="w-full py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition"
+                    >
+                      Refresh
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -388,7 +505,14 @@ const PhoneDetail = () => {
 
             {/* Bid History */}
             <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Bid History</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white">Bid History</h3>
+                {isOwner && bids.length > 0 && !timeRemaining.ended && auction?.status === 'active' && (
+                  <span className="text-xs text-gray-400 bg-[#1a1a1a] px-3 py-1 rounded-full">
+                    You can accept any bid
+                  </span>
+                )}
+              </div>
               
               {bids.length === 0 ? (
                 <div className="text-center py-8">
@@ -407,7 +531,7 @@ const PhoneDetail = () => {
                       }`}
                     >
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="flex-1">
                           {bid.isWinning && (
                             <span className="inline-flex items-center gap-1 bg-[#c4ff0d] text-black text-xs font-bold px-2 py-1 rounded mb-2">
                               <Trophy className="w-3 h-3" />
@@ -422,9 +546,21 @@ const PhoneDetail = () => {
                             {new Date(bid.timestamp).toLocaleDateString()}, {new Date(bid.timestamp).toLocaleTimeString()}
                           </p>
                         </div>
-                        <p className={`text-xl font-bold ${bid.isWinning ? 'text-[#c4ff0d]' : 'text-white'}`}>
-                          ₹{bid.bidAmount.toLocaleString()}
-                        </p>
+                        <div className="flex flex-col items-end gap-2">
+                          <p className={`text-xl font-bold ${bid.isWinning ? 'text-[#c4ff0d]' : 'text-white'}`}>
+                            ₹{bid.bidAmount.toLocaleString()}
+                          </p>
+                          {/* Accept Bid Button - Only for seller */}
+                          {isOwner && !timeRemaining.ended && auction?.status === 'active' && (
+                            <button
+                              onClick={() => openAcceptModal(bid)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition"
+                            >
+                              <Gavel className="w-3 h-3" />
+                              Accept
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -434,6 +570,75 @@ const PhoneDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Accept Bid Confirmation Modal */}
+      {showAcceptModal && selectedBidToAccept && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl w-full max-w-md p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-yellow-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Accept This Bid?</h2>
+              <p className="text-gray-400 text-sm">
+                Are you sure you want to accept this bid? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="bg-[#1a1a1a] rounded-xl p-4 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400 text-sm">Bidder:</span>
+                <span className="text-white font-medium">{selectedBidToAccept.anonymousBidderId}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400 text-sm">Bid Amount:</span>
+                <span className="text-[#c4ff0d] font-bold text-lg">₹{selectedBidToAccept.bidAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Phone:</span>
+                <span className="text-white">{phone?.brand} {phone?.model}</span>
+              </div>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+              <p className="text-blue-400 text-sm">
+                <strong>Note:</strong> Once accepted, confirmation emails will be sent to both you and the buyer with next steps for completing the transaction.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAcceptModal(false);
+                  setSelectedBidToAccept(null);
+                }}
+                disabled={acceptingBid}
+                className="flex-1 py-3 bg-[#1a1a1a] border border-[#2a2a2a] text-white rounded-xl font-semibold hover:bg-[#2a2a2a] transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAcceptBid}
+                disabled={acceptingBid}
+                className="flex-1 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {acceptingBid ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <Gavel className="w-4 h-4" />
+                    Accept Bid
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

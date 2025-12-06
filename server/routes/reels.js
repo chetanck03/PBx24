@@ -12,7 +12,9 @@ import {
   addComment,
   getComments,
   deleteComment,
-  checkLikeStatus
+  checkLikeStatus,
+  getUserReelStats,
+  incrementReelView
 } from '../controllers/reelController.js';
 
 const router = express.Router();
@@ -20,6 +22,8 @@ const router = express.Router();
 // Public routes
 router.get('/all', getAllReels);
 router.get('/user/:userId', getUserReels);
+router.get('/user/:userId/stats', getUserReelStats);
+router.post('/:id/view', incrementReelView);  // Track view when reel is watched
 router.get('/:id', getReelById);
 router.get('/:id/comments', getComments);
 

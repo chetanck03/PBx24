@@ -4,6 +4,8 @@ import {
   getAllPhones,
   getPhoneById,
   getSellerPhones,
+  getSoldPhones,
+  getPurchasedPhones,
   updatePhone,
   verifyPhone,
   deletePhone
@@ -14,11 +16,15 @@ const router = express.Router();
 
 // Public routes
 router.get('/', getAllPhones);
-router.get('/:id', getPhoneById);
 
-// Seller routes
+// Seller routes (must be before /:id to avoid conflicts)
 router.post('/', requireAuth, requireSeller, createPhone);
 router.get('/seller/my-phones', requireAuth, requireSeller, getSellerPhones);
+router.get('/seller/sold', requireAuth, getSoldPhones);
+router.get('/user/purchased', requireAuth, getPurchasedPhones);
+
+// Dynamic routes
+router.get('/:id', getPhoneById);
 router.put('/:id', requireAuth, updatePhone);
 router.delete('/:id', requireAuth, deletePhone);
 

@@ -242,25 +242,7 @@ const Chatbot = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Questions */}
-              {messages.length <= 2 && (
-                <div className="px-4 pb-2">
-                  <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {quickQuestions.map((q, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleQuickQuestion(q)}
-                        className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-full text-xs text-gray-300 transition"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Input */}
+              {/* Input - Always visible */}
               <form onSubmit={sendMessage} className="p-4 border-t border-[#2a2a2a]">
                 <div className="flex gap-2">
                   <input
@@ -286,6 +268,24 @@ const Chatbot = () => {
                     )}
                   </button>
                 </div>
+                {/* Quick Questions - Below input */}
+                {messages.length <= 2 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {quickQuestions.map((q, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleQuickQuestion(q)}
+                          className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-full text-xs text-gray-300 transition"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </form>
             </>
           )}

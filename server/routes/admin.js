@@ -39,14 +39,52 @@ router.get('/phones/:id', getPhoneById);
 router.get('/phones/:phoneId/bids', getPhoneBids);
 router.put('/phones/:id/verify', async (req, res, next) => {
   try {
-    const { verificationStatus } = req.body;
-    const phone = await Phone.findByIdAndUpdate(
-      req.params.id,
-      { verificationStatus, status: verificationStatus === 'approved' ? 'live' : 'rejected' },
-      { new: true }
-    );
-    res.json({ success: true, data: phone });
+    const { verificationStatus, adminNotes } = req.body;
+    const phone = await Phone.findById(req.params.id);
+    
+    if (!phone) {
+      return res.status(404).json({ success: false, error: { message: 'Phone not found' } });
+    }
+    
+    phone.verificationStatus = verificationStatus;
+    if (adminNotes) phone.adminNotes = adminNotes;
+    
+    if (verificationStatus === 'approved') {
+      phone.status = 'live';
+      await phone.save();
+      
+      // Create auction automatically when phone is approved
+      const Auction = (await import('../models/Auction.js')).default;
+      const existingAuction = await Auction.findOne({ phoneId: phone._id });
+      
+      if (!existingAuction) {
+        // Set default auction end time if not set (7 days from now)
+        const auctionEndTime = phone.auctionEndTime || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        
+        const auction = new Auction({
+          phoneId: phone._id,
+          sellerId: phone.sellerId,
+          anonymousSellerId: phone.anonymousSellerId,
+          startingBid: phone.minBidPrice,
+          currentBid: 0,
+          auctionEndTime: auctionEndTime,
+          status: 'active'
+        });
+        await auction.save();
+        console.log('Auction created for phone:', phone._id);
+      }
+    } else {
+      phone.status = 'rejected';
+      await phone.save();
+    }
+    
+    res.json({ 
+      success: true, 
+      data: phone,
+      message: `Phone ${verificationStatus} successfully${verificationStatus === 'approved' ? ' and auction created' : ''}`
+    });
   } catch (error) {
+    console.error('Error verifying phone:', error);
     next(error);
   }
 });

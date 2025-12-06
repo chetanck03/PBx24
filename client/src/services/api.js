@@ -57,6 +57,8 @@ export const phoneAPI = {
   getAllPhones: (params) => api.get('/phones', { params }),
   getPhoneById: (id) => api.get(`/phones/${id}`),
   getSellerPhones: () => api.get('/phones/seller/my-phones'),
+  getSoldPhones: () => api.get('/phones/seller/sold'),
+  getPurchasedPhones: () => api.get('/phones/user/purchased'),
   createPhone: (data) => api.post('/phones', data),
   updatePhone: (id, data) => api.put(`/phones/${id}`, data),
   deletePhone: (id) => api.delete(`/phones/${id}`)
@@ -122,8 +124,10 @@ export const reelAPI = {
   },
   getAllReels: (page = 1, limit = 10) => api.get('/reels/all', { params: { page, limit } }),
   getUserReels: (userId, page = 1, limit = 12) => api.get(`/reels/user/${userId}`, { params: { page, limit } }),
+  getUserReelStats: (userId) => api.get(`/reels/user/${userId}/stats`),
   getMyReels: (page = 1, limit = 12) => api.get('/reels/my/reels', { params: { page, limit } }),
   getReelById: (id) => api.get(`/reels/${id}`),
+  incrementView: (id) => api.post(`/reels/${id}/view`),
   deleteReel: (id) => api.delete(`/reels/${id}`),
   toggleLike: (id) => api.post(`/reels/${id}/like`),
   checkLikeStatus: (id) => api.get(`/reels/${id}/like/status`),
@@ -141,6 +145,14 @@ export const complaintAPI = {
   updateComplaintStatus: (id, data) => api.put(`/complaints/${id}`, data),
   deleteComplaint: (id) => api.delete(`/complaints/${id}`),
   getComplaintStats: () => api.get('/complaints/stats/overview')
+};
+
+// Chatbot API
+export const chatbotAPI = {
+  sendMessage: (message) => api.post('/chatbot/message', { message }),
+  getInfo: () => api.get('/chatbot/info'),
+  getPhoneData: () => api.get('/chatbot/phones'),
+  healthCheck: () => api.get('/chatbot/health')
 };
 
 export default api;

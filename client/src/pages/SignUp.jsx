@@ -216,9 +216,17 @@ const SignUp = () => {
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
 
       <div className="max-w-4xl w-full mx-auto relative z-10">
+        {/* Back to Home - Top */}
+        <div className="mb-4">
+          <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </Link>
+        </div>
+
         <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-center mb-8">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-lime-400 rounded-2xl flex items-center justify-center">
                 <Smartphone className="w-6 h-6 text-black" />
@@ -228,23 +236,6 @@ const SignUp = () => {
                 <p className="text-xs text-gray-400">Auction Platform</p>
               </div>
             </div>
-            
-            {step === 1 && (
-              <div className="flex items-center gap-2 bg-lime-400/20 border border-lime-400 rounded-full px-4 py-2">
-                <div className="w-8 h-8 bg-lime-400 rounded-full flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">1/2</span>
-                </div>
-                <span className="text-lime-400 text-sm font-semibold">Account Details</span>
-              </div>
-            )}
-            {step === 2 && (
-              <div className="flex items-center gap-2 bg-lime-400/20 border border-lime-400 rounded-full px-4 py-2">
-                <div className="w-8 h-8 bg-lime-400 rounded-full flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">2/2</span>
-                </div>
-                <span className="text-lime-400 text-sm font-semibold">Verify Email</span>
-              </div>
-            )}
           </div>
 
           {/* Title */}
@@ -263,20 +254,14 @@ const SignUp = () => {
           {/* Error Message */}
           {error && (
             <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-red-400">⚠️</span>
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
             <div className="mb-6 bg-green-500/10 border border-green-500/50 rounded-xl p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-green-400">✅</span>
-                <p className="text-sm text-green-400">{success}</p>
-              </div>
+              <p className="text-sm text-green-400">{success}</p>
             </div>
           )}
 
@@ -543,14 +528,6 @@ const SignUp = () => {
               </div>
             </form>
           )}
-        </div>
-
-        {/* Back to Home */}
-        <div className="text-center mt-6">
-          <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center justify-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to home
-          </Link>
         </div>
       </div>
     </div>

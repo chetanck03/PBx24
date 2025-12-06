@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone, KeyRound } from 'lucide-react';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
   const handleOtpChange = (index, value) => {
@@ -148,70 +150,84 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">PB</span>
-          </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            {step === 1 ? 'Forgot Password?' : 'Reset Password'}
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {step === 1 
-              ? 'Enter your email to receive a reset code'
-              : `We sent a 6-digit code to ${email}`
-            }
-          </p>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Background gradient effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black"></div>
+      <div className="absolute top-20 left-20 w-96 h-96 bg-lime-500/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
+
+      <div className="w-full max-w-md mx-auto relative z-10">
+        {/* Back to Home */}
+        <div className="mb-4">
+          <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </Link>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-xl rounded-2xl">
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex">
-                <span className="text-red-400">⚠️</span>
-                <p className="ml-3 text-sm text-red-600">{error}</p>
+        <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-lime-400 rounded-2xl flex items-center justify-center">
+                <KeyRound className="w-6 h-6 text-black" />
               </div>
+            </div>
+            
+            <h2 className="text-3xl font-bold text-white mb-2">
+              {step === 1 ? 'Forgot Password?' : 'Reset Password'}
+            </h2>
+            <p className="text-gray-400">
+              {step === 1 
+                ? 'Enter your email to receive a reset code'
+                : `We sent a 6-digit code to ${email}`
+              }
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-4">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
+          {/* Success Message */}
           {success && (
-            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex">
-                <span className="text-green-400">✅</span>
-                <p className="ml-3 text-sm text-green-600">{success}</p>
-              </div>
+            <div className="mb-6 bg-green-500/10 border border-green-500/50 rounded-xl p-4">
+              <p className="text-sm text-green-400">{success}</p>
             </div>
           )}
 
           {step === 1 ? (
-            <form className="space-y-6" onSubmit={handleSendOTP}>
+            <form className="space-y-5" onSubmit={handleSendOTP}>
+              {/* Email Input */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Email address
                 </label>
                 <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
-                    id="email"
-                    name="email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
                     placeholder="Enter your email"
                   />
                 </div>
               </div>
 
+              {/* Send OTP Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition transform hover:scale-105"
+                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-3.5 rounded-full font-bold text-lg hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
                     Sending OTP...
                   </div>
                 ) : (
@@ -220,12 +236,13 @@ const ForgotPassword = () => {
               </button>
             </form>
           ) : (
-            <form className="space-y-6" onSubmit={handleResetPassword}>
+            <form className="space-y-5" onSubmit={handleResetPassword}>
+              {/* OTP Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4 text-center">
+                <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
                   Enter the 6-digit code
                 </label>
-                <div className="flex justify-center space-x-2">
+                <div className="flex justify-center gap-2">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -235,73 +252,84 @@ const ForgotPassword = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-12 h-12 text-center text-xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-12 h-12 text-center text-xl font-bold bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
                     />
                   ))}
                 </div>
               </div>
 
+              {/* New Password Input */}
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   New Password
                 </label>
                 <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
-                    id="newPassword"
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="block w-full px-3 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-12 pr-12 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
                     placeholder="Enter new password"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-gray-600 hover:text-gray-800"
                     onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
+              {/* Confirm Password Input */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Confirm Password
                 </label>
                 <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
-                    id="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-12 pr-12 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
                     placeholder="Confirm new password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 
+              {/* Resend OTP */}
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">Didn't receive the code?</p>
+                <p className="text-sm text-gray-400 mb-2">Didn't receive the code?</p>
                 <button
                   type="button"
                   onClick={handleResendOTP}
                   disabled={resendTimer > 0 || loading}
-                  className="text-blue-600 hover:text-blue-500 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="text-lime-400 hover:text-lime-300 font-medium disabled:text-gray-500 disabled:cursor-not-allowed transition"
                 >
                   {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                 </button>
               </div>
 
+              {/* Reset Password Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition transform hover:scale-105"
+                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-3.5 rounded-full font-bold text-lg hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
                     Resetting...
                   </div>
                 ) : (
@@ -309,32 +337,29 @@ const ForgotPassword = () => {
                 )}
               </button>
 
+              {/* Change Email */}
               <div className="text-center">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-sm text-gray-500 hover:text-gray-700 transition"
+                  className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center justify-center gap-2 mx-auto"
                 >
-                  ← Change email address
+                  <ArrowLeft className="w-4 h-4" />
+                  Change email address
                 </button>
               </div>
             </form>
           )}
 
+          {/* Sign In Link */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               Remember your password?{' '}
-              <Link to="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500 transition">
+              <Link to="/auth/signin" className="text-lime-400 hover:text-lime-300 font-semibold transition">
                 Sign in
               </Link>
             </p>
           </div>
-        </div>
-
-        <div className="text-center">
-          <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 transition">
-            ← Back to home
-          </Link>
         </div>
       </div>
     </div>

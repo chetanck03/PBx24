@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const Footer = () => {
   return (
     <footer className="bg-[#0a0a0a] border-t border-[#1a1a1a] text-white py-16">
@@ -5,12 +7,12 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
           {/* Brand Section */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 bg-[#c4ff0d] rounded-xl flex items-center justify-center">
                 <span className="text-black font-bold text-lg">P</span>
               </div>
               <h3 className="text-xl font-bold text-white">PhoneBid</h3>
-            </div>
+            </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
               The world's first anonymous phone marketplace. Buy and sell phones with complete privacy and security.
             </p>
@@ -40,19 +42,19 @@ const Footer = () => {
             <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Platform</h4>
             <ul className="space-y-3">
               <li>
-                <a href="/#how-it-works" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/how-it-works" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   How it Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#features" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/security" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Security
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#features" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/privacy" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Privacy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -62,19 +64,19 @@ const Footer = () => {
             <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Support</h4>
             <ul className="space-y-3">
               <li>
-                <a href="/complaints" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/help" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/complaints" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/contact" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#how-it-works" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/faq" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -84,19 +86,19 @@ const Footer = () => {
             <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/terms" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                <Link to="/privacy-policy" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
-                  Cookie Policy
-                </a>
+                <Link to="/blog" className="text-gray-400 text-sm hover:text-[#c4ff0d] transition">
+                  Blog
+                </Link>
               </li>
             </ul>
           </div>
@@ -109,9 +111,9 @@ const Footer = () => {
               &copy; 2024 PhoneBid Marketplace. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-500">
-              <a href="#" className="hover:text-[#c4ff0d] transition">Privacy</a>
-              <a href="#" className="hover:text-[#c4ff0d] transition">Terms</a>
-              <a href="#" className="hover:text-[#c4ff0d] transition">Cookies</a>
+              <Link to="/privacy-policy" className="hover:text-[#c4ff0d] transition">Privacy</Link>
+              <Link to="/terms" className="hover:text-[#c4ff0d] transition">Terms</Link>
+              <Link to="/blog" className="hover:text-[#c4ff0d] transition">Blog</Link>
             </div>
           </div>
         </div>

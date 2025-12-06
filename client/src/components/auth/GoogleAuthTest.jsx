@@ -9,7 +9,7 @@ const GoogleAuthTest = () => {
     setClientId(config.GOOGLE_CLIENT_ID);
     
     if (!config.GOOGLE_CLIENT_ID) {
-      setStatus('❌ Google Client ID is missing from environment variables');
+      setStatus('Google Client ID is missing from environment variables');
       return;
     }
 
@@ -21,7 +21,7 @@ const GoogleAuthTest = () => {
     
     script.onload = () => {
       if (window.google) {
-        setStatus('✅ Google OAuth script loaded successfully');
+        setStatus('Google OAuth script loaded successfully');
         
         // Test initialization
         try {
@@ -29,17 +29,17 @@ const GoogleAuthTest = () => {
             client_id: config.GOOGLE_CLIENT_ID,
             callback: () => {}, // dummy callback
           });
-          setStatus('✅ Google OAuth initialized successfully');
+          setStatus('Google OAuth initialized successfully');
         } catch (error) {
-          setStatus(`❌ Google OAuth initialization failed: ${error.message}`);
+          setStatus(`Google OAuth initialization failed: ${error.message}`);
         }
       } else {
-        setStatus('❌ Google OAuth script loaded but window.google is not available');
+        setStatus('Google OAuth script loaded but window.google is not available');
       }
     };
     
     script.onerror = () => {
-      setStatus('❌ Failed to load Google OAuth script');
+      setStatus('Failed to load Google OAuth script');
     };
     
     document.body.appendChild(script);

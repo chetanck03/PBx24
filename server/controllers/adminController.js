@@ -308,12 +308,21 @@ export const searchByIds = async (req, res) => {
       transactions: []
     };
     
-    // Search users by real ID or anonymous ID
+    // Search users by real ID, anonymous ID, email, or name
+    const userSearchConditions = [
+      { anonymousId: query },
+      { email: { $regex: query, $options: 'i' } },
+      { name: { $regex: query, $options: 'i' } }
+    ];
+    
+    // Check if query is a valid MongoDB ObjectId
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(query);
+    if (isValidObjectId) {
+      userSearchConditions.unshift({ _id: query });
+    }
+    
     const users = await User.find({
-      $or: [
-        { _id: query },
-        { anonymousId: query }
-      ]
+      $or: userSearchConditions
     });
     results.users = users.map(u => u.toFullObject());
     

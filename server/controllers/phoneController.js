@@ -314,9 +314,14 @@ export const verifyPhone = async (req, res) => {
       const existingAuction = await Auction.findOne({ phoneId: phone._id });
       
       if (!existingAuction) {
+        const auctionEndTime = phone.auctionEndTime || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         const auction = new Auction({
           phoneId: phone._id,
-          auctionEndTime: phone.auctionEndTime,
+          sellerId: phone.sellerId,
+          anonymousSellerId: phone.anonymousSellerId,
+          startingBid: phone.minBidPrice,
+          currentBid: 0,
+          auctionEndTime: auctionEndTime,
           status: 'active'
         });
         await auction.save();
@@ -401,11 +406,114 @@ export const deletePhone = async (req, res) => {
   }
 };
 
+/**
+ * Get seller's sold phones (phones that have been sold)
+ */
+export const getSoldPhones = async (req, res) => {
+  try {
+    // Find phones owned by this seller that are sold
+    const phones = await Phone.find({ 
+      sellerId: req.userId, 
+      status: 'sold' 
+    }).sort({ updatedAt: -1 });
+    
+    // Get auction details for each phone
+    const Auction = (await import('../models/Auction.js')).default;
+    const phonesWithAuction = await Promise.all(phones.map(async (phone) => {
+      const auction = await Auction.findOne({ phoneId: phone._id, status: 'ended' });
+      return {
+        ...phone.toSellerObject(),
+        soldPrice: auction?.currentBid || phone.minBidPrice,
+        soldAt: auction?.updatedAt || phone.updatedAt,
+        buyerAnonymousId: auction?.anonymousLeadingBidder || 'N/A'
+      };
+    }));
+    
+    res.json({
+      success: true,
+      data: phonesWithAuction,
+      count: phonesWithAuction.length
+    });
+  } catch (error) {
+    console.error('Error fetching sold phones:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching sold phones',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
+/**
+ * Get user's purchased phones (auctions won by user)
+ */
+export const getPurchasedPhones = async (req, res) => {
+  try {
+    const Auction = (await import('../models/Auction.js')).default;
+    const { encrypt } = await import('../services/encryptionService.js');
+    
+    // Find all ended auctions
+    const endedAuctions = await Auction.find({ status: 'ended' }).populate('phoneId');
+    
+    // Filter auctions where this user is the winner
+    const wonAuctions = endedAuctions.filter(auction => {
+      try {
+        const winnerId = auction.getWinnerId();
+        return winnerId === req.userId;
+      } catch (error) {
+        return false;
+      }
+    });
+    
+    // Map to phone data with purchase details
+    const purchasedPhones = wonAuctions.map(auction => {
+      const phone = auction.phoneId;
+      if (!phone) return null;
+      
+      return {
+        _id: phone._id,
+        brand: phone.brand,
+        model: phone.model,
+        storage: phone.storage,
+        ram: phone.ram,
+        color: phone.color,
+        condition: phone.condition,
+        images: phone.images,
+        description: phone.description,
+        location: phone.location,
+        purchasePrice: auction.currentBid,
+        purchasedAt: auction.updatedAt,
+        sellerAnonymousId: auction.anonymousSellerId,
+        auctionId: auction._id
+      };
+    }).filter(Boolean);
+    
+    res.json({
+      success: true,
+      data: purchasedPhones,
+      count: purchasedPhones.length
+    });
+  } catch (error) {
+    console.error('Error fetching purchased phones:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching purchased phones',
+        code: 'FETCH_ERROR'
+      }
+    });
+  }
+};
+
 export default {
   createPhone,
   getAllPhones,
   getPhoneById,
   getSellerPhones,
+  getSoldPhones,
+  getPurchasedPhones,
   updatePhone,
   verifyPhone,
   deletePhone

@@ -88,7 +88,6 @@ const Login = () => {
                     </div>
 
                     <div className="mb-8">
-                      <div className="text-3xl mb-2">👋</div>
                       <h2 className="text-white text-3xl font-bold mb-2">Welcome back</h2>
                       <p className="text-gray-400 text-sm">Sign in to your PhoneBid account</p>
                     </div>
@@ -154,6 +153,14 @@ const Login = () => {
 
         {/* Right Side - Actual Login Form */}
         <div className="w-full max-w-md mx-auto lg:mx-0">
+          {/* Back to Home - Top */}
+          <div className="mb-4">
+            <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to home
+            </Link>
+          </div>
+
           <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl">
             {/* Header */}
             <div className="mb-8">
@@ -167,9 +174,6 @@ const Login = () => {
                 </div>
               </div>
               
-              <div className="mb-2">
-                <span className="text-3xl">👋</span>
-              </div>
               <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
               <p className="text-gray-400">Sign in to your PhoneBid account</p>
             </div>
@@ -177,10 +181,7 @@ const Login = () => {
             {/* Error Message */}
             {error && (
               <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-red-400">⚠️</span>
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
+                <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
 
@@ -271,7 +272,7 @@ const Login = () => {
               </div>
 
               {/* Google Sign In - Using the actual GoogleAuthButton component */}
-              <div className="google-auth-wrapper">
+              <div className="google-auth-wrapper flex justify-center">
                 <GoogleAuthButton />
               </div>
 
@@ -294,14 +295,6 @@ const Login = () => {
               {' '}and{' '}
               <span className="text-gray-400 hover:text-gray-300 cursor-pointer">Privacy Policy</span>
             </p>
-          </div>
-
-          {/* Back to Home */}
-          <div className="text-center mt-6">
-            <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center justify-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back to home
-            </Link>
           </div>
         </div>
       </div>

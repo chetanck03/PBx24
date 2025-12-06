@@ -1,20 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { phoneAPI } from '../services/api';
+import { phoneAPI, reelAPI } from '../services/api';
 import Footer from '../components/common/Footer';
+import { Play, Plus, Heart, Eye, Loader2 } from 'lucide-react';
 
 const ProfessionalHome = () => {
   const navigate = useNavigate();
   const [featuredPhones, setFeaturedPhones] = useState([]);
+  const [reels, setReels] = useState([]);
+  const [reelsLoading, setReelsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Redirect logged-in users to marketplace
     const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+    
+    // Redirect logged-in users to marketplace
     if (token) {
       navigate('/marketplace');
       return;
     }
     loadFeaturedPhones();
+    loadReels();
   }, [navigate]);
 
   const loadFeaturedPhones = async () => {
@@ -23,6 +30,26 @@ const ProfessionalHome = () => {
       setFeaturedPhones(res.data.data.slice(0, 4));
     } catch (error) {
       console.error('Error loading featured phones:', error);
+    }
+  };
+
+  const loadReels = async () => {
+    try {
+      setReelsLoading(true);
+      const res = await reelAPI.getAllReels(1, 6);
+      setReels(res.data.data || []);
+    } catch (error) {
+      console.error('Error loading reels:', error);
+    } finally {
+      setReelsLoading(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (!isLoggedIn) {
+      navigate('/auth/signin');
+    } else {
+      navigate('/reels');
     }
   };
 
@@ -102,17 +129,26 @@ const ProfessionalHome = () => {
             </div>
 
             {/* Right Content - Phone Device Mockup */}
-            <div className="relative hidden lg:block">
-              <div className="relative perspective-1000">
+            <div className="relative hidden lg:flex justify-center items-center">
+              {/* Large background glow - positioned behind everything */}
+              <div 
+                className="absolute bg-[#c4ff0d] opacity-40 blur-[100px] rounded-full"
+                style={{ width: '500px', height: '500px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 0 }}
+              ></div>
+              
+              <div className="relative perspective-1000 z-10">
                 {/* Floating animation wrapper */}
                 <div className="animate-float">
                   {/* Phone Device Frame */}
-                  <div className="relative transform-gpu transition-all duration-500 hover:scale-105">
-                    {/* Glow effect behind phone */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-30 blur-3xl rounded-[3rem]"></div>
+                  <div className="relative transform-gpu transition-all duration-500 hover:scale-105 flex justify-center">
+                    {/* Secondary glow closer to phone */}
+                    <div 
+                      className="absolute bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-50 blur-[80px] rounded-full"
+                      style={{ width: '380px', height: '600px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: -1 }}
+                    ></div>
                     
                     {/* Phone Outer Frame */}
-                    <div className="relative w-[340px] h-[680px] bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] rounded-[3rem] p-3 shadow-2xl border border-[#3a3a3a]">
+                    <div className="relative w-[340px] h-[680px] bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] rounded-[3rem] p-3 shadow-2xl border border-[#3a3a3a] z-10">
                       {/* Phone Screen */}
                       <div className="w-full h-full bg-[#0a0a0a] rounded-[2.5rem] overflow-hidden relative">
                         {/* Status Bar */}
@@ -201,9 +237,9 @@ const ProfessionalHome = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
-              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
-                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="w-16 h-16 bg-[#c4ff0d] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-all duration-300">
+                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
               <h3 className="text-2xl font-bold text-white mb-4">Complete Anonymity</h3>
@@ -213,8 +249,8 @@ const ProfessionalHome = () => {
             </div>
             
             <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
-              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
-                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-[#c4ff0d] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-all duration-300">
+                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
@@ -225,8 +261,8 @@ const ProfessionalHome = () => {
             </div>
             
             <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded-2xl hover:border-[#c4ff0d] transition-all duration-300 group transform hover:scale-105 hover:shadow-2xl hover:shadow-[#c4ff0d]/20">
-              <div className="w-16 h-16 bg-[#c4ff0d] bg-opacity-10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-opacity-20 transition-all duration-300 group-hover:scale-110">
-                <svg className="w-8 h-8 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-[#c4ff0d] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-all duration-300">
+                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
@@ -261,7 +297,7 @@ const ProfessionalHome = () => {
               <div className="text-center group">
                 <div className="relative inline-block mb-6">
                   {/* Box Container */}
-                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-3xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 transition-all duration-300 relative">
                     <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
@@ -289,7 +325,7 @@ const ProfessionalHome = () => {
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-[#c4ff0d] mb-3">List or Browse</h3>
+                <h3 className="text-xl font-bold text-white mb-3">List or Browse</h3>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
                   List your phone for auction or browse available phones to bid on.
                 </p>
@@ -298,7 +334,7 @@ const ProfessionalHome = () => {
               {/* Step 3 */}
               <div className="text-center group">
                 <div className="relative inline-block mb-6">
-                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-3xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 transition-all duration-300 relative">
                     <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -316,7 +352,7 @@ const ProfessionalHome = () => {
               {/* Step 4 */}
               <div className="text-center group">
                 <div className="relative inline-block mb-6">
-                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-3xl flex items-center justify-center group-hover:border-[#c4ff0d] transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 relative">
+                  <div className="w-32 h-32 bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-3xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-[#c4ff0d]/30 transition-all duration-300 relative">
                     <svg className="w-12 h-12 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
@@ -447,6 +483,73 @@ const ProfessionalHome = () => {
         </div>
       </section>
 
+      {/* Reels Section */}
+      <section id="reels" className="py-20 bg-[#0a0a0a] relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="text-[#c4ff0d] text-sm font-semibold mb-4 tracking-wider uppercase">Short Videos</div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Phone Reels</h2>
+            <p className="text-lg text-gray-400">Watch short videos showcasing phones (max 30 sec)</p>
+          </div>
+
+          {/* Reels Grid with Upload Button in Center */}
+          <div className="relative">
+            {reelsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 text-[#c4ff0d] animate-spin" />
+              </div>
+            ) : reels.length === 0 ? (
+              <div className="text-center py-12">
+                <Play className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg mb-2">No reels yet</p>
+                <p className="text-gray-500 text-sm mb-6">Be the first to upload a reel!</p>
+                <button
+                  onClick={handleUploadClick}
+                  className="bg-[#c4ff0d] text-black px-6 py-3 rounded-lg font-semibold hover:bg-[#d4ff3d] transition flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-5 h-5" />
+                  Upload Reel
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+                {/* First 3 reels */}
+                {reels.slice(0, 3).map((reel) => (
+                  <ReelCard key={reel._id} reel={reel} onClick={() => navigate('/reels')} />
+                ))}
+                
+                {/* Center Upload Button */}
+                <div 
+                  onClick={handleUploadClick}
+                  className="aspect-[9/16] bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border-2 border-dashed border-[#c4ff0d] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#1a1a1a] hover:border-solid transition-all group"
+                >
+                  <div className="w-16 h-16 bg-[#c4ff0d] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-[#c4ff0d]/30">
+                    <Plus className="w-8 h-8 text-black" />
+                  </div>
+                  <p className="text-white font-semibold text-sm">Upload Reel</p>
+                  <p className="text-gray-500 text-xs mt-1">Max 30 sec</p>
+                </div>
+                
+                {/* Last 3 reels */}
+                {reels.slice(3, 6).map((reel) => (
+                  <ReelCard key={reel._id} reel={reel} onClick={() => navigate('/reels')} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="text-center mt-12">
+            <button
+              onClick={() => navigate('/reels')}
+              className="bg-[#c4ff0d] text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105 flex items-center gap-2 mx-auto"
+            >
+              <Play className="w-5 h-5" />
+              View All Reels
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section with 3D Card */}
       <section className="py-20 bg-[#0a0a0a] relative overflow-hidden">
         {/* Background gradient glow */}
@@ -460,14 +563,6 @@ const ProfessionalHome = () => {
             
             {/* Main CTA Card */}
             <div className="relative bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] border border-[#3a3a3a] rounded-3xl p-12 text-center transform transition-all duration-500 hover:scale-105 hover:border-[#c4ff0d]/50 shadow-2xl">
-              {/* Join Today badge */}
-              <div className="inline-flex items-center gap-2 bg-[#c4ff0d] bg-opacity-20 border border-[#c4ff0d] rounded-full px-4 py-2 mb-6">
-                <svg className="w-4 h-4 text-[#c4ff0d]" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span className="text-[#c4ff0d] text-sm font-semibold">Join Today</span>
-              </div>
-              
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Ready to Start?</h2>
               <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
                 Join thousands of users buying and selling phones anonymously
@@ -497,6 +592,81 @@ const ProfessionalHome = () => {
 
       {/* Footer */}
       <Footer />
+    </div>
+  );
+};
+
+// Reel Card Component
+const ReelCard = ({ reel, onClick }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isHovered) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+    }
+  }, [isHovered]);
+
+  return (
+    <div 
+      className="aspect-[9/16] bg-[#1a1a1a] rounded-2xl overflow-hidden relative cursor-pointer group"
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Video/Thumbnail */}
+      {isHovered ? (
+        <video
+          ref={videoRef}
+          src={reel.videoUrl}
+          className="w-full h-full object-cover"
+          muted
+          loop
+          playsInline
+        />
+      ) : (
+        <img 
+          src={reel.thumbnailUrl} 
+          alt="Reel thumbnail"
+          className="w-full h-full object-cover"
+        />
+      )}
+
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Play Icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Play className="w-6 h-6 text-white" fill="white" />
+          </div>
+        </div>
+      </div>
+
+      {/* Stats at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex items-center justify-between text-white text-xs">
+          <div className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            <span>{reel.views || 0}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Heart className="w-3 h-3" />
+            <span>{reel.likes?.length || 0}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* User Avatar */}
+      <div className="absolute top-3 left-3">
+        <div className="w-8 h-8 bg-[#c4ff0d] rounded-full flex items-center justify-center text-black font-bold text-xs">
+          {reel.userId?.name?.charAt(0) || 'U'}
+        </div>
+      </div>
     </div>
   );
 };

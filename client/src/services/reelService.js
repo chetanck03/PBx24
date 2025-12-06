@@ -31,6 +31,11 @@ export const reelAPI = {
     return api.get(`/reels/${id}`);
   },
 
+  // Increment view count when reel is watched
+  incrementView: (id) => {
+    return api.post(`/reels/${id}/view`);
+  },
+
   // Delete a reel
   deleteReel: (id) => {
     return api.delete(`/reels/${id}`);

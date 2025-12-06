@@ -136,14 +136,17 @@ const AdminDashboard = () => {
     setActiveTab('user-detail');
     setMobileMenuOpen(false);
     try {
-      const [phonesRes, bidsRes, reelsRes] = await Promise.all([
+      const [phonesRes, bidsRes, reelStatsRes] = await Promise.all([
         adminAPI.getAllPhones({ sellerId: user._id }),
         adminAPI.getAllBids({ bidderId: user._id }),
-        reelAPI.getUserReels(user._id, 1, 50).catch(() => ({ data: { data: [] } }))
+        reelAPI.getUserReelStats(user._id).catch(() => ({ data: { data: { reels: [], totalViews: 0 } } }))
       ]);
       setUserPhones(phonesRes.data.data || []);
       setUserBids(bidsRes.data.data || []);
-      setUserReels(reelsRes.data.data || []);
+      const reelStats = reelStatsRes.data.data || { reels: [], totalViews: 0 };
+      setUserReels(reelStats.reels || []);
+      // Store total views in selectedUser for display
+      setSelectedUser(prev => ({ ...prev, totalReelViews: reelStats.totalViews || 0 }));
     } catch (error) { console.error('Error loading user details:', error); }
   }, []);
 
@@ -260,9 +263,9 @@ const AdminDashboard = () => {
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
-                <input type="text" placeholder="Search..." value={searchQuery}
+                <input type="text" placeholder="Search by ID, name, email..." value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full sm:w-48 lg:w-64 px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d]" />
+                  className="w-full sm:w-48 lg:w-72 px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d]" />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               </div>
               <button onClick={loadDashboardData} className="p-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] rounded-xl transition flex-shrink-0">
@@ -819,7 +822,8 @@ const ComplaintsTab = ({ complaints, onUpdate, StatusBadge }) => (
 // User Detail Tab - Responsive
 const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDeleteUser }) => {
   if (!user) return null;
-  const totalViews = reels.reduce((sum, reel) => sum + (reel.views || 0), 0);
+  // Use totalReelViews from user object (fetched from stats API) or calculate from reels
+  const totalViews = user.totalReelViews || reels.reduce((sum, reel) => sum + (reel.views || 0), 0);
   return (
     <div className="space-y-4 lg:space-y-6">
       <button onClick={onBack} className="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
@@ -832,7 +836,8 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
             <div className="min-w-0">
               <h2 className="text-lg lg:text-2xl font-bold text-white truncate">{user.name}</h2>
               <p className="text-gray-400 text-sm truncate">{user.email}</p>
-              <p className="text-[#c4ff0d] text-xs lg:text-sm mt-1">{user.anonymousId}</p>
+              <p className="text-[#c4ff0d] text-xs lg:text-sm mt-1">ID: {user.anonymousId}</p>
+              <p className="text-gray-500 text-xs mt-1">User ID: {user._id}</p>
             </div>
           </div>
           <button onClick={() => onDeleteUser(user._id, user.name)} className="w-full sm:w-auto px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 text-sm">Delete User</button>
@@ -857,23 +862,81 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
             <p className="text-lg lg:text-2xl font-bold text-red-500">{reels.length}</p>
           </div>
           <div className="bg-[#1a1a1a] rounded-lg lg:rounded-xl p-3 lg:p-4 text-center">
-            <p className="text-gray-500 text-xs">Views</p>
-            <p className="text-lg lg:text-2xl font-bold text-purple-500">{totalViews}</p>
+            <p className="text-gray-500 text-xs">Total Reel Views</p>
+            <p className="text-lg lg:text-2xl font-bold text-purple-500">{totalViews.toLocaleString()}</p>
           </div>
         </div>
+      </div>
+      
+      {/* Government ID Section */}
+      <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl lg:rounded-2xl p-4 lg:p-6">
+        <h3 className="text-white font-semibold mb-3 lg:mb-4 flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-blue-400" />
+          Government ID Verification
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs mb-1">ID Type</p>
+            <p className="text-white font-medium">{user.governmentIdType || 'Not provided'}</p>
+          </div>
+          <div className="bg-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs mb-1">KYC Status</p>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              user.kycStatus === 'verified' ? 'bg-green-500/20 text-green-400' :
+              user.kycStatus === 'rejected' ? 'bg-red-500/20 text-red-400' :
+              'bg-yellow-500/20 text-yellow-400'
+            }`}>{user.kycStatus}</span>
+          </div>
+        </div>
+        {user.governmentIdProof && (
+          <div className="mt-4">
+            <p className="text-gray-500 text-xs mb-2">Government ID Document</p>
+            <div className="bg-[#1a1a1a] rounded-xl p-2 inline-block">
+              <img 
+                src={user.governmentIdProof} 
+                alt="Government ID" 
+                className="max-w-full max-h-64 rounded-lg object-contain cursor-pointer hover:opacity-80 transition"
+                onClick={() => window.open(user.governmentIdProof, '_blank')}
+              />
+            </div>
+            <p className="text-gray-500 text-xs mt-2">Click image to view full size</p>
+          </div>
+        )}
+        {!user.governmentIdProof && (
+          <div className="mt-4 bg-[#1a1a1a] rounded-xl p-4 text-center">
+            <p className="text-gray-500 text-sm">No government ID document uploaded</p>
+          </div>
+        )}
       </div>
       {phones.length > 0 && (
         <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl lg:rounded-2xl p-4 lg:p-6">
           <h3 className="text-white font-semibold mb-3 lg:mb-4">Phones ({phones.length})</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             {phones.map((phone) => (
-              <div key={phone._id} className="bg-[#1a1a1a] rounded-xl p-3 lg:p-4 flex gap-3">
+              <div 
+                key={phone._id} 
+                className="bg-[#1a1a1a] rounded-xl p-3 lg:p-4 flex gap-3 cursor-pointer hover:bg-[#252525] hover:border-[#c4ff0d] border border-transparent transition-all"
+                onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+              >
                 {phone.images?.[0] && <img src={phone.images[0]} alt="" className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg object-cover flex-shrink-0" />}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-white font-medium text-sm truncate">{phone.brand} {phone.model}</p>
                   <p className="text-gray-500 text-xs">{phone.storage}</p>
                   <p className="text-[#c4ff0d] font-medium text-sm mt-1">₹{phone.minBidPrice?.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      phone.verificationStatus === 'approved' ? 'bg-green-500/20 text-green-400' :
+                      phone.verificationStatus === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                      'bg-yellow-500/20 text-yellow-400'
+                    }`}>{phone.verificationStatus}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      phone.status === 'live' ? 'bg-blue-500/20 text-blue-400' :
+                      phone.status === 'sold' ? 'bg-purple-500/20 text-purple-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>{phone.status}</span>
+                  </div>
                 </div>
+                <Eye className="w-4 h-4 text-gray-500 flex-shrink-0" />
               </div>
             ))}
           </div>

@@ -412,9 +412,9 @@ const CreatePhoneListing = () => {
                   </label>
                   <div className="space-y-2">
                     {[
-                      { key: 'charger', label: 'Charger', icon: '🔌' },
-                      { key: 'bill', label: '7 Days', icon: '📄' },
-                      { key: 'box', label: '14 Box', icon: '📦' }
+                      { key: 'charger', label: 'Charger' },
+                      { key: 'bill', label: 'Original Bill' },
+                      { key: 'box', label: 'Original Box' }
                     ].map(acc => (
                       <button
                         key={acc.key}
@@ -437,7 +437,7 @@ const CreatePhoneListing = () => {
                             </svg>
                           )}
                         </div>
-                        <span className="text-gray-300 text-sm">{acc.icon} {acc.label}</span>
+                        <span className="text-gray-300 text-sm">{acc.label}</span>
                       </button>
                     ))}
                   </div>
@@ -459,7 +459,7 @@ const CreatePhoneListing = () => {
                     <option value="14">14 Days</option>
                     <option value="30">30 Days</option>
                   </select>
-                  <p className="text-gray-500 text-xs mt-2">34 4. Days</p>
+                  <p className="text-gray-500 text-xs mt-2">Select auction duration</p>
                 </div>
               </div>
             </div>
@@ -494,7 +494,7 @@ const CreatePhoneListing = () => {
                         Uploaded: {uploadedCount} / 6 maximum
                       </p>
                       {uploadedCount < 2 && (
-                        <p className="text-red-400 text-xs mt-2">⚠️ Minimum 2 images required</p>
+                        <p className="text-red-400 text-xs mt-2">Minimum 2 images required</p>
                       )}
                     </label>
                   </div>
