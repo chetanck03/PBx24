@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
 import Footer from '../components/common/Footer';
+import toast from 'react-hot-toast';
 
 const CreatePhoneListing = () => {
   const navigate = useNavigate();
@@ -193,7 +194,7 @@ const CreatePhoneListing = () => {
       };
       
       await phoneAPI.createPhone(phoneData);
-      alert('Phone listing created successfully! Awaiting admin verification.');
+      toast.success('Phone listing created successfully! Awaiting admin verification.');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error creating listing:', error);

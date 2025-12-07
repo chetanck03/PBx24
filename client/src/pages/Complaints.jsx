@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Footer from '../components/common/Footer';
+import toast from 'react-hot-toast';
 import { 
   MessageSquare, Send, X, FileText, Mail, Tag, 
   Paperclip, AlertTriangle, User
@@ -45,7 +46,7 @@ const Complaints = () => {
     e.preventDefault();
     
     if (!formData.subject || !formData.description || !formData.userEmail) {
-      alert('Please fill all required fields');
+      toast.error('Please fill all required fields');
       return;
     }
 
@@ -56,7 +57,7 @@ const Complaints = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      alert('Complaint submitted successfully! Admin will review it soon.');
+      toast.success('Complaint submitted successfully! Admin will review it soon.');
       setShowCreateModal(false);
       setFormData({
         subject: '',
@@ -68,7 +69,7 @@ const Complaints = () => {
       });
       loadComplaints();
     } catch (error) {
-      alert(error.response?.data?.error?.message || 'Failed to submit complaint');
+      toast.error(error.response?.data?.error?.message || 'Failed to submit complaint');
     } finally {
       setSubmitting(false);
     }

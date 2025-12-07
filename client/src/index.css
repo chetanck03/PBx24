@@ -81,3 +81,30 @@ de scrollbar for reels feed */
 .aspect-\[9\/16\] {
   aspect-ratio: 9 / 16;
 }
+
+/* Custom scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-track-\[#1a1a1a\]::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 10px;
+}
+
+.scrollbar-thumb-\[#c4ff0d\]::-webkit-scrollbar-thumb {
+  background: #c4ff0d;
+  border-radius: 10px;
+}
+
+.scrollbar-thumb-\[#c4ff0d\]::-webkit-scrollbar-thumb:hover {
+  background: #d4ff3d;
+}
+
+.scrollbar-thumb-rounded-full::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+}

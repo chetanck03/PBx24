@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { adminAPI, reelAPI } from '../services/api';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard, Users, Smartphone, Receipt, MessageSquare, Search,
   TrendingUp, DollarSign, ShoppingBag, Gavel, UserCheck, Clock,
@@ -92,8 +93,8 @@ const AdminDashboard = () => {
     try {
       await adminAPI.verifyPhone(phoneId, { verificationStatus: status });
       setPhones(prev => prev.map(p => p._id === phoneId ? { ...p, verificationStatus: status } : p));
-      alert(`Phone ${status} successfully!`);
-    } catch (error) { alert('Failed to verify phone'); }
+      toast.success(`Phone ${status} successfully!`);
+    } catch (error) { toast.error('Failed to verify phone'); }
   }, []);
 
   const handleReviewKYC = useCallback(async (userId, status) => {
@@ -109,8 +110,8 @@ const AdminDashboard = () => {
       await adminAPI.deleteUser(userId);
       setUsers(prev => prev.filter(u => u._id !== userId));
       if (selectedUser?._id === userId) { setSelectedUser(null); setActiveTab('users'); }
-      alert('User deleted!');
-    } catch (error) { alert('Failed to delete user'); }
+      toast.success('User deleted!');
+    } catch (error) { toast.error('Failed to delete user'); }
   }, [selectedUser]);
 
   const handleDeletePhone = useCallback(async (phoneId, phoneModel) => {
@@ -119,16 +120,16 @@ const AdminDashboard = () => {
       await adminAPI.deletePhone(phoneId);
       setPhones(prev => prev.filter(p => p._id !== phoneId));
       setUserPhones(prev => prev.filter(p => p._id !== phoneId));
-      alert('Phone deleted!');
-    } catch (error) { alert('Failed to delete phone'); }
+      toast.success('Phone deleted!');
+    } catch (error) { toast.error('Failed to delete phone'); }
   }, []);
 
   const handleUpdateComplaint = useCallback(async (complaintId, status, response) => {
     try {
       await adminAPI.updateComplaint(complaintId, { status, adminResponse: response });
       setComplaints(prev => prev.map(c => c._id === complaintId ? { ...c, status } : c));
-      alert('Complaint updated!');
-    } catch (error) { alert('Failed to update complaint'); }
+      toast.success('Complaint updated!');
+    } catch (error) { toast.error('Failed to update complaint'); }
   }, []);
 
   const handleViewUser = useCallback(async (user) => {
@@ -155,8 +156,8 @@ const AdminDashboard = () => {
     try {
       await reelAPI.deleteReel(reelId);
       setUserReels(prev => prev.filter(r => r._id !== reelId));
-      alert('Reel deleted!');
-    } catch (error) { alert('Failed to delete reel'); }
+      toast.success('Reel deleted!');
+    } catch (error) { toast.error('Failed to delete reel'); }
   }, []);
 
   const sidebarItems = useMemo(() => [

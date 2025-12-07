@@ -428,7 +428,7 @@ const CommentsModal = ({ reel, onClose, onCommentsUpdate }) => {
         </div>
 
         {/* Comments List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full p-4 space-y-4">
           {loading && comments.length === 0 ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 text-[#c4ff0d] animate-spin" />

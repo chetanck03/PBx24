@@ -161,7 +161,7 @@ const EnhancedMarketplace = () => {
         {/* Mobile Filters Overlay */}
         {mobileFiltersOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-black/80" onClick={() => setMobileFiltersOpen(false)}>
-            <div className="absolute right-0 top-0 h-full w-80 max-w-full bg-[#0f0f0f] p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="absolute right-0 top-0 h-full w-80 max-w-full bg-[#0f0f0f] p-4 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-white font-bold text-lg">Filters</h2>
                 <button onClick={() => setMobileFiltersOpen(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
@@ -339,7 +339,7 @@ const EnhancedMarketplace = () => {
                       </div>
                     </button>
                     {showBrandDropdown && (
-                      <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full">
                         {brands.map(brand => (
                           <button
                             key={brand}
@@ -431,7 +431,7 @@ const EnhancedMarketplace = () => {
                         </svg>
                       </button>
                       {showLocationDropdown && (
-                        <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-h-60 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full">
                           {indianStates.map(state => (
                             <button
                               key={state}

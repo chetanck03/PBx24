@@ -4,6 +4,7 @@ import api from '../config/api';
 import config from '../config/env.js';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const CreateListing = () => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ const CreateListing = () => {
       }
     } catch (error) {
       console.error('Failed to create listing:', error);
-      alert('Failed to create listing. Please try again.');
+      toast.error('Failed to create listing. Please try again.');
     } finally {
       setLoading(false);
     }

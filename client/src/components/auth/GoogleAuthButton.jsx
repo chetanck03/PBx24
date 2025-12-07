@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../common/LoadingSpinner';
 import config from '../../config/env.js';
+import toast from 'react-hot-toast';
 
 const GoogleAuthButton = () => {
   const [loading, setLoading] = useState(false);
@@ -107,11 +108,11 @@ const GoogleAuthButton = () => {
         navigate('/dashboard');
       } else {
         console.error('Login failed:', result.error);
-        alert('Login failed: ' + result.error);
+        toast.error('Login failed: ' + result.error);
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('Login failed. Please try again.');
+      toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -119,7 +120,7 @@ const GoogleAuthButton = () => {
 
   const handleGoogleLogin = () => {
     if (!googleLoaded) {
-      alert('Google OAuth is still loading. Please wait a moment and try again.');
+      toast.error('Google OAuth is still loading. Please wait a moment and try again.');
       return;
     }
 

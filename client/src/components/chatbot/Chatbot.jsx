@@ -192,7 +192,7 @@ const Chatbot = () => {
           {!isMinimized && (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 h-[calc(100%-140px)]">
+              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full p-4 space-y-4 h-[calc(100%-140px)]">
                 {messages.map((msg, index) => (
                   <div
                     key={index}
