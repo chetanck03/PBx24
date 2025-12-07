@@ -89,6 +89,8 @@ const auctionSchema = new mongoose.Schema({
 auctionSchema.index({ phoneId: 1 });
 auctionSchema.index({ status: 1, auctionEndTime: 1 });
 auctionSchema.index({ winnerId: 1 });
+auctionSchema.index({ sellerId: 1 });
+auctionSchema.index({ createdAt: -1 });
 
 // Method to set leading bidder (encrypts the ID)
 auctionSchema.methods.setLeadingBidder = function(bidderId, anonymousBidderId) {

@@ -4,43 +4,52 @@ import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { reelAPI } from './services/api';
 import { X, Upload, Loader2 } from 'lucide-react';
 
-// Pages
-import Home from './pages/Home';
+// Critical pages - load immediately
 import ProfessionalHome from './pages/ProfessionalHome';
 import Login from './pages/Login';
-import SimpleLogin from './pages/SimpleLogin';
 import SignUp from './pages/SignUp';
-import ForgotPassword from './pages/ForgotPassword';
-import Marketplace from './pages/Marketplace';
 import EnhancedMarketplace from './pages/EnhancedMarketplace';
-import PhoneDetail from './pages/PhoneDetail';
-import Dashboard from './pages/Dashboard';
-import UserDashboard from './pages/UserDashboard';
-import CreateListing from './pages/CreateListing';
-import CreatePhoneListing from './pages/CreatePhoneListing';
-import ListingDetail from './pages/ListingDetail';
-import AdminPanel from './pages/AdminPanel';
-import AdminDashboard from './pages/AdminDashboard';
-import UserProfile from './pages/UserProfile';
-import Complaints from './pages/Complaints';
-import Reels from './pages/Reels';
-import Chatbot from './components/chatbot/Chatbot';
 
-// Static Pages
-import HowItWorks from './pages/HowItWorks';
-import Security from './pages/Security';
-import Privacy from './pages/Privacy';
-import HelpCenter from './pages/HelpCenter';
-import ContactUs from './pages/ContactUs';
-import FAQ from './pages/FAQ';
-import TermsOfService from './pages/TermsOfService';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import Blog from './pages/Blog';
-import BlogDetail from './pages/BlogDetail';
+// Lazy load non-critical pages
+const Home = lazy(() => import('./pages/Home'));
+const SimpleLogin = lazy(() => import('./pages/SimpleLogin'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const PhoneDetail = lazy(() => import('./pages/PhoneDetail'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const CreateListing = lazy(() => import('./pages/CreateListing'));
+const CreatePhoneListing = lazy(() => import('./pages/CreatePhoneListing'));
+const ListingDetail = lazy(() => import('./pages/ListingDetail'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const Complaints = lazy(() => import('./pages/Complaints'));
+const Reels = lazy(() => import('./pages/Reels'));
+const Chatbot = lazy(() => import('./components/chatbot/Chatbot'));
+
+// Static Pages - lazy load
+const HowItWorks = lazy(() => import('./pages/HowItWorks'));
+const Security = lazy(() => import('./pages/Security'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogDetail = lazy(() => import('./pages/BlogDetail'));
+
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+    <Loader2 className="w-12 h-12 text-[#c4ff0d] animate-spin" />
+  </div>
+);
 
 function AppContent() {
   const location = useLocation();
@@ -528,9 +537,10 @@ function AppContent() {
         </nav>
       )}
       <main>
-        <Routes>
-          <Route path="/" element={<ProfessionalHome />} />
-          <Route path="/home-old" element={<Home />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<ProfessionalHome />} />
+            <Route path="/home-old" element={<Home />} />
               
               {/* Auth Routes */}
               <Route path="/auth/signin" element={<Login />} />
@@ -613,11 +623,11 @@ function AppContent() {
                 } 
               />
               
-              {/* Admin Routes */}
+              {/* Admin Routes - Admin Only */}
               <Route 
                 path="/admin" 
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute adminOnly>
                     <AdminDashboard />
                   </ProtectedRoute>
                 } 
@@ -625,17 +635,22 @@ function AppContent() {
               <Route 
                 path="/admin-old" 
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute adminOnly>
                     <AdminPanel />
                   </ProtectedRoute>
                 } 
               />
-            </Routes>
+              </Routes>
+            </Suspense>
           </main>
 
           <Toaster position="top-right" />
           {/* Hide chatbot on reels page */}
-          {location.pathname !== '/reels' && <Chatbot />}
+          {location.pathname !== '/reels' && (
+            <Suspense fallback={null}>
+              <Chatbot />
+            </Suspense>
+          )}
 
           {/* Upload Reel Modal */}
           {showUploadModal && (

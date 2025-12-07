@@ -41,7 +41,9 @@ const bidSchema = new mongoose.Schema({
 // Indexes for efficient queries
 bidSchema.index({ auctionId: 1, bidAmount: -1 });
 bidSchema.index({ bidderId: 1 });
-bidSchema.index({ timestamp: 1 });
+bidSchema.index({ timestamp: -1 });
+bidSchema.index({ auctionId: 1, timestamp: -1 });
+bidSchema.index({ isWinning: 1 });
 
 // Pre-save hook to encrypt bidderId and generate anonymousBidderId
 bidSchema.pre('save', function(next) {

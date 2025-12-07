@@ -3,6 +3,7 @@ import Phone from '../models/Phone.js';
 import Auction from '../models/Auction.js';
 import Bid from '../models/Bid.js';
 import Transaction from '../models/Transaction.js';
+import cache from '../utils/cache.js';
 
 /**
  * Get all users with full decrypted data
@@ -15,15 +16,39 @@ export const getAllUsers = async (req, res) => {
     if (role) filter.role = role;
     if (kycStatus) filter.kycStatus = kycStatus;
     
-    const users = await User.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await User.countDocuments(filter);
+    // Don't use lean() so we can use model methods
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select('-__v')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit),
+      User.countDocuments(filter)
+    ]);
     
     // Return full decrypted data for admin
-    const usersData = users.map(user => user.toFullObject());
+    const usersData = users.map(user => {
+      try {
+        return user.toFullObject();
+      } catch (err) {
+        console.error('Error converting user:', err);
+        // Return basic user data if conversion fails
+        return {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          role: user.role,
+          anonymousId: user.anonymousId,
+          walletBalance: user.walletBalance,
+          kycStatus: user.kycStatus,
+          isActive: user.isActive,
+          isBanned: user.isBanned,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        };
+      }
+    });
     
     res.json({
       success: true,
@@ -35,11 +60,13 @@ export const getAllUsers = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
       error: {
         message: 'Error fetching users',
-        code: 'FETCH_ERROR'
+        code: 'FETCH_ERROR',
+        details: error.message
       }
     });
   }
@@ -139,15 +166,37 @@ export const getAllPhones = async (req, res) => {
     if (verificationStatus) filter.verificationStatus = verificationStatus;
     if (sellerId) filter.sellerId = sellerId;
     
-    const phones = await Phone.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Phone.countDocuments(filter);
+    // Don't use lean() so we can use model methods
+    const [phones, total] = await Promise.all([
+      Phone.find(filter)
+        .select('-__v')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit),
+      Phone.countDocuments(filter)
+    ]);
     
     // Return full admin view with decrypted IMEI
-    const phonesData = phones.map(phone => phone.toAdminObject());
+    const phonesData = phones.map(phone => {
+      try {
+        return phone.toAdminObject();
+      } catch (err) {
+        console.error('Error converting phone:', err);
+        return {
+          _id: phone._id,
+          brand: phone.brand,
+          model: phone.model,
+          storage: phone.storage,
+          condition: phone.condition,
+          status: phone.status,
+          verificationStatus: phone.verificationStatus,
+          minBidPrice: phone.minBidPrice,
+          location: phone.location,
+          images: phone.images,
+          createdAt: phone.createdAt
+        };
+      }
+    });
     
     res.json({
       success: true,
@@ -159,6 +208,7 @@ export const getAllPhones = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching phones:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -214,15 +264,35 @@ export const getAllTransactions = async (req, res) => {
     if (meetingStatus) filter.meetingStatus = meetingStatus;
     if (escrowStatus) filter.escrowStatus = escrowStatus;
     
-    const transactions = await Transaction.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Transaction.countDocuments(filter);
+    // Don't use lean() so we can use model methods
+    const [transactions, total] = await Promise.all([
+      Transaction.find(filter)
+        .select('-__v')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit),
+      Transaction.countDocuments(filter)
+    ]);
     
     // Return full admin view with decrypted IDs
-    const transactionsData = transactions.map(transaction => transaction.toAdminObject());
+    const transactionsData = transactions.map(transaction => {
+      try {
+        return transaction.toAdminObject();
+      } catch (err) {
+        console.error('Error converting transaction:', err);
+        return {
+          _id: transaction._id,
+          auctionId: transaction.auctionId,
+          phoneId: transaction.phoneId,
+          finalAmount: transaction.finalAmount,
+          platformCommission: transaction.platformCommission,
+          sellerPayout: transaction.sellerPayout,
+          meetingStatus: transaction.meetingStatus,
+          escrowStatus: transaction.escrowStatus,
+          createdAt: transaction.createdAt
+        };
+      }
+    });
     
     res.json({
       success: true,
@@ -234,11 +304,13 @@ export const getAllTransactions = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching transactions:', error);
     res.status(500).json({
       success: false,
       error: {
         message: 'Error fetching transactions',
-        code: 'FETCH_ERROR'
+        code: 'FETCH_ERROR',
+        details: error.message
       }
     });
   }
@@ -542,61 +614,231 @@ export const getAllBids = async (req, res) => {
  */
 export const getPlatformStatistics = async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = 'platform_statistics';
+    const cachedStats = cache.get(cacheKey);
+    if (cachedStats) {
+      return res.json({
+        success: true,
+        data: cachedStats,
+        cached: true
+      });
+    }
+
+    // Fetch all stats with individual error handling
+    const [userStats, phoneStats, auctionStats, bidStats, transactionStats, revenueData] = await Promise.all([
+      Promise.all([
+        User.countDocuments().catch(() => 0),
+        User.countDocuments({ role: 'user' }).catch(() => 0),
+        User.countDocuments({ role: 'admin' }).catch(() => 0),
+        User.countDocuments({ kycStatus: 'pending' }).catch(() => 0),
+        User.countDocuments({ kycStatus: 'verified' }).catch(() => 0),
+        User.countDocuments({ isBanned: true }).catch(() => 0)
+      ]),
+      Promise.all([
+        Phone.countDocuments().catch(() => 0),
+        Phone.countDocuments({ verificationStatus: 'pending' }).catch(() => 0),
+        Phone.countDocuments({ verificationStatus: 'approved' }).catch(() => 0),
+        Phone.countDocuments({ verificationStatus: 'rejected' }).catch(() => 0),
+        Phone.countDocuments({ status: 'live' }).catch(() => 0),
+        Phone.countDocuments({ status: 'sold' }).catch(() => 0)
+      ]),
+      Promise.all([
+        Auction.countDocuments().catch(() => 0),
+        Auction.countDocuments({ status: 'active' }).catch(() => 0),
+        Auction.countDocuments({ status: 'ended' }).catch(() => 0),
+        Auction.countDocuments({ status: 'completed' }).catch(() => 0)
+      ]),
+      Promise.all([
+        Bid.countDocuments().catch(() => 0),
+        Bid.countDocuments({ isWinning: true }).catch(() => 0)
+      ]),
+      Promise.all([
+        Transaction.countDocuments().catch(() => 0),
+        Transaction.countDocuments({ meetingStatus: 'pending' }).catch(() => 0),
+        Transaction.countDocuments({ meetingStatus: 'completed' }).catch(() => 0),
+        Transaction.countDocuments({ escrowStatus: 'held' }).catch(() => 0),
+        Transaction.countDocuments({ escrowStatus: 'released' }).catch(() => 0)
+      ]),
+      Transaction.aggregate([
+        { $match: { escrowStatus: 'released' } },
+        {
+          $group: {
+            _id: null,
+            totalPlatformCommission: { $sum: '$platformCommission' },
+            totalSellerPayouts: { $sum: '$sellerPayout' },
+            totalTransactionValue: { $sum: '$finalAmount' }
+          }
+        }
+      ]).catch(() => [])
+    ]);
+    
     const stats = {
       users: {
-        total: await User.countDocuments(),
-        buyers: await User.countDocuments({ role: 'user' }),
-        sellers: await User.countDocuments({ role: 'user' }),
-        admins: await User.countDocuments({ role: 'admin' }),
-        kycPending: await User.countDocuments({ kycStatus: 'pending' }),
-        kycVerified: await User.countDocuments({ kycStatus: 'verified' }),
-        banned: await User.countDocuments({ isBanned: true })
+        total: userStats[0] || 0,
+        buyers: userStats[1] || 0,
+        sellers: userStats[1] || 0,
+        admins: userStats[2] || 0,
+        kycPending: userStats[3] || 0,
+        kycVerified: userStats[4] || 0,
+        banned: userStats[5] || 0
       },
       phones: {
-        total: await Phone.countDocuments(),
-        pending: await Phone.countDocuments({ verificationStatus: 'pending' }),
-        approved: await Phone.countDocuments({ verificationStatus: 'approved' }),
-        rejected: await Phone.countDocuments({ verificationStatus: 'rejected' }),
-        live: await Phone.countDocuments({ status: 'live' }),
-        sold: await Phone.countDocuments({ status: 'sold' })
+        total: phoneStats[0] || 0,
+        pending: phoneStats[1] || 0,
+        approved: phoneStats[2] || 0,
+        rejected: phoneStats[3] || 0,
+        live: phoneStats[4] || 0,
+        sold: phoneStats[5] || 0
       },
       auctions: {
-        total: await Auction.countDocuments(),
-        active: await Auction.countDocuments({ status: 'active' }),
-        ended: await Auction.countDocuments({ status: 'ended' }),
-        completed: await Auction.countDocuments({ status: 'completed' })
+        total: auctionStats[0] || 0,
+        active: auctionStats[1] || 0,
+        ended: auctionStats[2] || 0,
+        completed: auctionStats[3] || 0,
+        cancelled: Math.max(0, (auctionStats[0] || 0) - (auctionStats[1] || 0) - (auctionStats[2] || 0) - (auctionStats[3] || 0))
       },
       bids: {
-        total: await Bid.countDocuments(),
-        winning: await Bid.countDocuments({ isWinning: true })
+        total: bidStats[0] || 0,
+        winning: bidStats[1] || 0
       },
       transactions: {
-        total: await Transaction.countDocuments(),
-        pending: await Transaction.countDocuments({ meetingStatus: 'pending' }),
-        completed: await Transaction.countDocuments({ meetingStatus: 'completed' }),
-        escrowHeld: await Transaction.countDocuments({ escrowStatus: 'held' }),
-        escrowReleased: await Transaction.countDocuments({ escrowStatus: 'released' })
+        total: transactionStats[0] || 0,
+        pending: transactionStats[1] || 0,
+        completed: transactionStats[2] || 0,
+        escrowHeld: transactionStats[3] || 0,
+        escrowReleased: transactionStats[4] || 0
+      },
+      revenue: revenueData[0] || {
+        totalPlatformCommission: 0,
+        totalSellerPayouts: 0,
+        totalTransactionValue: 0
       }
     };
     
-    // Calculate revenue
-    const transactions = await Transaction.find({ escrowStatus: 'released' });
-    stats.revenue = {
-      totalPlatformCommission: transactions.reduce((sum, t) => sum + t.platformCommission, 0),
-      totalSellerPayouts: transactions.reduce((sum, t) => sum + t.sellerPayout, 0),
-      totalTransactionValue: transactions.reduce((sum, t) => sum + t.finalAmount, 0)
-    };
+    // Cache for 30 seconds
+    cache.set(cacheKey, stats, 30);
     
     res.json({
       success: true,
       data: stats
     });
   } catch (error) {
+    console.error('Stats error:', error);
     res.status(500).json({
       success: false,
       error: {
         message: 'Error fetching statistics',
-        code: 'STATS_ERROR'
+        code: 'STATS_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
+/**
+ * Get all sold phones with buyer and seller details (Admin only)
+ */
+export const getSoldPhones = async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    
+    // Get all phones with status 'sold'
+    const soldPhones = await Phone.find({ status: 'sold' })
+      .sort({ updatedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Phone.countDocuments({ status: 'sold' });
+    
+    // Enrich with buyer, seller, and transaction details
+    const enrichedPhones = await Promise.all(soldPhones.map(async (phone) => {
+      const phoneData = phone.toAdminObject();
+      
+      // Get seller details
+      const seller = await User.findById(phone.sellerId);
+      if (seller) {
+        phoneData.sellerDetails = {
+          _id: seller._id,
+          name: seller.name,
+          email: seller.email,
+          anonymousId: seller.anonymousId,
+          avatar: seller.avatar
+        };
+      }
+      
+      // Get auction to find winner
+      const auction = await Auction.findOne({ phoneId: phone._id });
+      if (auction) {
+        phoneData.auctionId = auction._id;
+        phoneData.finalBidAmount = auction.currentBid;
+        phoneData.totalBids = auction.totalBids;
+        
+        // Get winner/buyer details
+        const winnerId = auction.getWinnerId();
+        if (winnerId) {
+          const buyer = await User.findById(winnerId);
+          if (buyer) {
+            phoneData.buyerDetails = {
+              _id: buyer._id,
+              name: buyer.name,
+              email: buyer.email,
+              anonymousId: buyer.anonymousId,
+              avatar: buyer.avatar
+            };
+          }
+        }
+      }
+      
+      // Get transaction details if exists
+      const transaction = await Transaction.findOne({ phoneId: phone._id });
+      if (transaction) {
+        phoneData.transactionId = transaction._id;
+        phoneData.saleAmount = transaction.finalAmount;
+        phoneData.platformCommission = transaction.platformCommission;
+        phoneData.sellerPayout = transaction.sellerPayout;
+        phoneData.escrowStatus = transaction.escrowStatus;
+        phoneData.meetingStatus = transaction.meetingStatus;
+        phoneData.soldAt = transaction.completedAt || transaction.createdAt;
+        
+        // If no buyer from auction, try from transaction
+        if (!phoneData.buyerDetails) {
+          const buyerId = transaction.getBuyerId();
+          if (buyerId) {
+            const buyer = await User.findById(buyerId);
+            if (buyer) {
+              phoneData.buyerDetails = {
+                _id: buyer._id,
+                name: buyer.name,
+                email: buyer.email,
+                anonymousId: buyer.anonymousId,
+                avatar: buyer.avatar
+              };
+            }
+          }
+        }
+      }
+      
+      return phoneData;
+    }));
+    
+    res.json({
+      success: true,
+      data: enrichedPhones,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching sold phones:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error fetching sold phones',
+        code: 'FETCH_ERROR',
+        details: error.message
       }
     });
   }
@@ -613,7 +855,8 @@ export default {
   searchByIds,
   getPlatformStatistics,
   getPhoneBids,
-  getAllBids
+  getAllBids,
+  getSoldPhones
 };
 
 

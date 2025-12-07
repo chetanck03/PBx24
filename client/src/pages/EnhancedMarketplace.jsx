@@ -55,10 +55,31 @@ const EnhancedMarketplace = () => {
   const loadPhones = async () => {
     try {
       setLoading(true);
-      const res = await phoneAPI.getAllPhones({
+      
+      // Build params with separate state and city for better filtering
+      const params = {
         status: 'live',
-        ...filters
-      });
+        brand: filters.brand,
+        condition: filters.condition,
+        storage: filters.storage,
+        ram: filters.ram,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice
+      };
+      
+      // Add location filters - send state and city separately
+      if (selectedState) {
+        params.state = selectedState;
+      }
+      if (cityInput) {
+        params.city = cityInput;
+      }
+      // Also send combined location for backward compatibility
+      if (filters.location) {
+        params.location = filters.location;
+      }
+      
+      const res = await phoneAPI.getAllPhones(params);
       const allPhones = res.data.data;
       setPhones(allPhones);
       
@@ -116,7 +137,7 @@ const EnhancedMarketplace = () => {
     if (filters.ram) count++;
     if (filters.color) count++;
     if (filters.condition) count++;
-    if (filters.location) count++;
+    if (selectedState) count++; // Count state selection instead of location string
     if (filters.trendingDeals) count++;
     if (filters.anonymousUsers) count++;
     return count;
@@ -248,9 +269,9 @@ const EnhancedMarketplace = () => {
                       <button onClick={() => handleFilterChange('storage', '')} className="text-gray-500 hover:text-white">×</button>
                     </span>
                   )}
-                  {filters.location && (
+                  {selectedState && (
                     <span className="bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                      {filters.location}
+                      📍 {cityInput ? `${cityInput}, ${selectedState}` : selectedState}
                       <button onClick={() => { handleFilterChange('location', ''); setSelectedState(''); setCityInput(''); }} className="text-gray-500 hover:text-white">×</button>
                     </span>
                   )}
@@ -437,6 +458,8 @@ const EnhancedMarketplace = () => {
                               key={state}
                               onClick={() => {
                                 setSelectedState(state);
+                                // Update location filter with state (city will be added if entered)
+                                handleFilterChange('location', cityInput ? `${cityInput}, ${state}` : state);
                                 setShowLocationDropdown(false);
                               }}
                               className="w-full text-left px-4 py-2 text-gray-300 hover:bg-[#2a2a2a] hover:text-[#c4ff0d] transition text-sm"
@@ -457,7 +480,7 @@ const EnhancedMarketplace = () => {
                             setCityInput(e.target.value);
                             handleFilterChange('location', e.target.value ? `${e.target.value}, ${selectedState}` : selectedState);
                           }}
-                          placeholder="Enter city name"
+                          placeholder="Enter city name (optional)"
                           className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d]"
                         />
                       </div>
@@ -525,6 +548,7 @@ const EnhancedMarketplace = () => {
                           <img
                             src={phone.images[0]}
                             alt={`${phone.brand} ${phone.model}`}
+                            loading="lazy"
                             className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                           />
                         ) : (

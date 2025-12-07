@@ -126,6 +126,8 @@ phoneSchema.index({ status: 1, auctionEndTime: 1 });
 phoneSchema.index({ verificationStatus: 1 });
 phoneSchema.index({ brand: 1, model: 1 });
 phoneSchema.index({ location: 1 });
+phoneSchema.index({ createdAt: -1 });
+phoneSchema.index({ status: 1, createdAt: -1 });
 
 // Pre-save hook to set anonymousSellerId from seller's anonymousId
 phoneSchema.pre('save', async function(next) {

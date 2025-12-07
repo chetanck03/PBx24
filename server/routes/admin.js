@@ -110,6 +110,16 @@ router.get('/search', searchByIds);
 // Statistics
 router.get('/statistics', getPlatformStatistics);
 
+// Sold phones
+router.get('/sold-phones', async (req, res, next) => {
+  try {
+    const { getSoldPhones } = await import('../controllers/adminController.js');
+    await getSoldPhones(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Complaint management
 import { getAllComplaints, updateComplaintStatus } from '../controllers/complaintController.js';
 router.get('/complaints', getAllComplaints);

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Smartphone, Receipt, MessageSquare, Search,
   TrendingUp, DollarSign, ShoppingBag, Gavel, UserCheck, Clock,
   ChevronRight, Eye, Check, X, Trash2, RefreshCw, Video, Play, Menu,
-  Activity, BarChart3, PieChart as PieChartIcon, Zap
+  Activity, BarChart3, PieChart as PieChartIcon, Zap, CheckCircle, ExternalLink
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -26,37 +26,21 @@ const AdminDashboard = () => {
   const [userPhones, setUserPhones] = useState([]);
   const [userBids, setUserBids] = useState([]);
   const [userReels, setUserReels] = useState([]);
+  const [soldPhones, setSoldPhones] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const refreshIntervalRef = useRef(null);
 
-  useEffect(() => { loadDashboardData(); }, []);
-  useEffect(() => {
-    if (activeTab === 'complaints' && complaints.length === 0) loadComplaints();
-  }, [activeTab, complaints.length]);
-
-  // Real-time auto-refresh every 30 seconds
-  useEffect(() => {
-    if (autoRefresh && activeTab === 'overview') {
-      refreshIntervalRef.current = setInterval(() => {
-        loadDashboardData(true);
-      }, 30000);
-    }
-    return () => {
-      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-    };
-  }, [autoRefresh, activeTab]);
-
   const loadDashboardData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const [statsRes, usersRes, phonesRes, transactionsRes] = await Promise.all([
         adminAPI.getPlatformStatistics(),
-        adminAPI.getAllUsers({ limit: 50 }),
-        adminAPI.getAllPhones({ limit: 50 }),
-        adminAPI.getAllTransactions({ limit: 50 })
+        adminAPI.getAllUsers({ limit: 100 }),
+        adminAPI.getAllPhones({ limit: 100 }),
+        adminAPI.getAllTransactions({ limit: 100 })
       ]);
       setStats(statsRes.data.data);
       setUsers(usersRes.data.data || []);
@@ -65,6 +49,7 @@ const AdminDashboard = () => {
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading dashboard:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -79,6 +64,37 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const loadSoldPhones = useCallback(async () => {
+    try {
+      const res = await adminAPI.getSoldPhones();
+      setSoldPhones(res.data.data || []);
+    } catch (error) {
+      console.error('Error loading sold phones:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  useEffect(() => {
+    if (activeTab === 'complaints' && complaints.length === 0) loadComplaints();
+    if (activeTab === 'sold-phones' && soldPhones.length === 0) loadSoldPhones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Real-time auto-refresh every 60 seconds
+  useEffect(() => {
+    if (autoRefresh && activeTab === 'overview') {
+      refreshIntervalRef.current = setInterval(() => {
+        loadDashboardData(true);
+      }, 60000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    };
+  }, [autoRefresh, activeTab, loadDashboardData]);
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
@@ -164,6 +180,7 @@ const AdminDashboard = () => {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'phones', label: 'Phones', icon: Smartphone },
+    { id: 'sold-phones', label: 'Sold Phones', icon: CheckCircle },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'complaints', label: 'Complaints', icon: MessageSquare },
   ], []);
@@ -278,7 +295,8 @@ const AdminDashboard = () => {
         <div className="p-4 lg:p-6">
           {activeTab === 'overview' && <OverviewTab stats={stats} users={users} phones={phones} transactions={transactions} autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} lastUpdated={lastUpdated} />}
           {activeTab === 'users' && <UsersTab users={users} onView={handleViewUser} onKYC={handleReviewKYC} onDelete={handleDeleteUser} StatusBadge={StatusBadge} />}
-          {activeTab === 'phones' && <PhonesTab phones={phones} onVerify={handleVerifyPhone} onDelete={handleDeletePhone} StatusBadge={StatusBadge} />}
+          {activeTab === 'phones' && <PhonesTab phones={phones} onVerify={handleVerifyPhone} onDelete={handleDeletePhone} onRefresh={loadDashboardData} StatusBadge={StatusBadge} />}
+          {activeTab === 'sold-phones' && <SoldPhonesTab soldPhones={soldPhones} onViewUser={handleViewUser} StatusBadge={StatusBadge} />}
           {activeTab === 'transactions' && <TransactionsTab transactions={transactions} StatusBadge={StatusBadge} />}
           {activeTab === 'complaints' && <ComplaintsTab complaints={complaints} onUpdate={handleUpdateComplaint} StatusBadge={StatusBadge} />}
           {activeTab === 'user-detail' && <UserDetailTab user={selectedUser} phones={userPhones} bids={userBids} reels={userReels} onBack={() => setActiveTab('users')} onDeleteReel={handleDeleteReel} onDeleteUser={handleDeleteUser} />}
@@ -659,12 +677,76 @@ const UsersTab = ({ users, onView, onKYC, onDelete, StatusBadge }) => (
 );
 
 
-// Phones Tab - Responsive
-const PhonesTab = ({ phones, onVerify, onDelete, StatusBadge }) => (
+// Phones Tab - Responsive (excludes sold phones)
+const PhonesTab = ({ phones, onVerify, onDelete, onRefresh, StatusBadge }) => {
+  const [filter, setFilter] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  };
+  
+  // Filter out sold phones - they appear in the Sold Phones tab
+  const activePhones = phones.filter(phone => phone.status !== 'sold');
+  
+  // Apply verification status filter
+  const filteredPhones = filter === 'all' 
+    ? activePhones 
+    : activePhones.filter(phone => phone.verificationStatus === filter);
+  
+  const pendingCount = activePhones.filter(p => p.verificationStatus === 'pending').length;
+  const approvedCount = activePhones.filter(p => p.verificationStatus === 'approved').length;
+  const rejectedCount = activePhones.filter(p => p.verificationStatus === 'rejected').length;
+  
+  return (
   <div className="space-y-4">
+    {/* Filter Tabs */}
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <button 
+        onClick={() => setFilter('all')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filter === 'all' ? 'bg-[#c4ff0d] text-black' : 'bg-[#1a1a1a] text-gray-400 hover:text-white'}`}
+      >
+        All ({activePhones.length})
+      </button>
+      <button 
+        onClick={() => setFilter('pending')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filter === 'pending' ? 'bg-yellow-500 text-black' : 'bg-[#1a1a1a] text-gray-400 hover:text-white'}`}
+      >
+        🔔 Pending ({pendingCount})
+      </button>
+      <button 
+        onClick={() => setFilter('approved')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filter === 'approved' ? 'bg-green-500 text-black' : 'bg-[#1a1a1a] text-gray-400 hover:text-white'}`}
+      >
+        Approved ({approvedCount})
+      </button>
+      <button 
+        onClick={() => setFilter('rejected')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filter === 'rejected' ? 'bg-red-500 text-white' : 'bg-[#1a1a1a] text-gray-400 hover:text-white'}`}
+      >
+        Rejected ({rejectedCount})
+      </button>
+      <button 
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className="ml-auto px-4 py-2 bg-[#1a1a1a] text-gray-400 hover:text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
+      >
+        <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+        Refresh
+      </button>
+    </div>
+    
+    {filteredPhones.length === 0 && (
+      <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-8 text-center">
+        <Smartphone className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+        <p className="text-gray-400">No phones found with status: {filter}</p>
+      </div>
+    )}
     {/* Mobile Cards */}
     <div className="lg:hidden space-y-3">
-      {phones.map((phone) => (
+      {filteredPhones.map((phone) => (
         <div key={phone._id} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
           <div className="flex gap-3 mb-3">
             {phone.images?.[0] ? <img src={phone.images[0]} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" /> : <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0"><Smartphone className="w-6 h-6 text-gray-500" /></div>}
@@ -703,7 +785,7 @@ const PhonesTab = ({ phones, onVerify, onDelete, StatusBadge }) => (
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1a1a1a]">
-            {phones.map((phone) => (
+            {filteredPhones.map((phone) => (
               <tr key={phone._id} className="hover:bg-[#1a1a1a]/50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -733,6 +815,7 @@ const PhonesTab = ({ phones, onVerify, onDelete, StatusBadge }) => (
     </div>
   </div>
 );
+};
 
 // Transactions Tab - Responsive
 const TransactionsTab = ({ transactions, StatusBadge }) => (
@@ -969,6 +1052,215 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
     </div>
   );
 };
+
+// Sold Phones Tab - Shows all sold phones with buyer/seller details
+const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => (
+  <div className="space-y-4">
+    {soldPhones.length === 0 ? (
+      <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl lg:rounded-2xl p-8 lg:p-12 text-center">
+        <CheckCircle className="w-10 h-10 lg:w-12 lg:h-12 text-gray-600 mx-auto mb-4" />
+        <p className="text-gray-400">No phones have been sold yet</p>
+      </div>
+    ) : (
+      <>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs">Total Sold</p>
+            <p className="text-2xl font-bold text-[#c4ff0d]">{soldPhones.length}</p>
+          </div>
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs">Total Revenue</p>
+            <p className="text-2xl font-bold text-green-500">₹{soldPhones.reduce((sum, p) => sum + (p.saleAmount || p.finalBidAmount || 0), 0).toLocaleString()}</p>
+          </div>
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs">Platform Commission</p>
+            <p className="text-2xl font-bold text-blue-500">₹{soldPhones.reduce((sum, p) => sum + (p.platformCommission || 0), 0).toLocaleString()}</p>
+          </div>
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+            <p className="text-gray-500 text-xs">Seller Payouts</p>
+            <p className="text-2xl font-bold text-purple-500">₹{soldPhones.reduce((sum, p) => sum + (p.sellerPayout || 0), 0).toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden space-y-3">
+          {soldPhones.map((phone) => (
+            <div key={phone._id} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
+              {/* Phone Info */}
+              <div className="flex gap-3 mb-3">
+                {phone.images?.[0] ? (
+                  <img src={phone.images[0]} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Smartphone className="w-6 h-6 text-gray-500" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <button 
+                    onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+                    className="text-white font-medium truncate hover:text-[#c4ff0d] flex items-center gap-1"
+                  >
+                    {phone.brand} {phone.model}
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                  <p className="text-gray-500 text-xs">{phone.storage} - {phone.condition}</p>
+                  <p className="text-[#c4ff0d] font-bold mt-1">₹{(phone.saleAmount || phone.finalBidAmount || phone.minBidPrice)?.toLocaleString()}</p>
+                </div>
+              </div>
+              
+              {/* Seller & Buyer */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-[#1a1a1a] rounded-lg p-2">
+                  <p className="text-gray-500 text-xs mb-1">Seller</p>
+                  {phone.sellerDetails ? (
+                    <button 
+                      onClick={() => onViewUser(phone.sellerDetails)}
+                      className="text-blue-400 text-sm hover:underline truncate block w-full text-left"
+                    >
+                      {phone.sellerDetails.name}
+                    </button>
+                  ) : (
+                    <p className="text-gray-400 text-sm">Unknown</p>
+                  )}
+                </div>
+                <div className="bg-[#1a1a1a] rounded-lg p-2">
+                  <p className="text-gray-500 text-xs mb-1">Buyer</p>
+                  {phone.buyerDetails ? (
+                    <button 
+                      onClick={() => onViewUser(phone.buyerDetails)}
+                      className="text-green-400 text-sm hover:underline truncate block w-full text-left"
+                    >
+                      {phone.buyerDetails.name}
+                    </button>
+                  ) : (
+                    <p className="text-gray-400 text-sm">Unknown</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2">
+                  {phone.escrowStatus && <StatusBadge status={phone.escrowStatus} />}
+                  {phone.meetingStatus && <StatusBadge status={phone.meetingStatus} />}
+                </div>
+                <span className="text-gray-500 text-xs">
+                  {phone.soldAt ? new Date(phone.soldAt).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden lg:block bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#1a1a1a]">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Phone</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Seller</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Buyer</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Sale Amount</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Commission</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Sold Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1a1a1a]">
+                {soldPhones.map((phone) => (
+                  <tr key={phone._id} className="hover:bg-[#1a1a1a]/50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {phone.images?.[0] ? (
+                          <img src={phone.images[0]} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center">
+                            <Smartphone className="w-6 h-6 text-gray-500" />
+                          </div>
+                        )}
+                        <div>
+                          <button 
+                            onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+                            className="text-white font-medium hover:text-[#c4ff0d] flex items-center gap-1"
+                          >
+                            {phone.brand} {phone.model}
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                          <p className="text-gray-500 text-sm">{phone.storage} - {phone.condition}</p>
+                          <p className="text-gray-600 text-xs font-mono">ID: {phone._id?.slice(-8)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {phone.sellerDetails ? (
+                        <div>
+                          <button 
+                            onClick={() => onViewUser(phone.sellerDetails)}
+                            className="text-blue-400 font-medium hover:underline flex items-center gap-1"
+                          >
+                            {phone.sellerDetails.name}
+                            <Eye className="w-3 h-3" />
+                          </button>
+                          <p className="text-gray-500 text-xs">{phone.sellerDetails.email}</p>
+                          <p className="text-gray-600 text-xs font-mono">{phone.sellerDetails.anonymousId}</p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">Unknown</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {phone.buyerDetails ? (
+                        <div>
+                          <button 
+                            onClick={() => onViewUser(phone.buyerDetails)}
+                            className="text-green-400 font-medium hover:underline flex items-center gap-1"
+                          >
+                            {phone.buyerDetails.name}
+                            <Eye className="w-3 h-3" />
+                          </button>
+                          <p className="text-gray-500 text-xs">{phone.buyerDetails.email}</p>
+                          <p className="text-gray-600 text-xs font-mono">{phone.buyerDetails.anonymousId}</p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">Unknown</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-[#c4ff0d] font-bold">₹{(phone.saleAmount || phone.finalBidAmount || phone.minBidPrice)?.toLocaleString()}</p>
+                      {phone.totalBids > 0 && (
+                        <p className="text-gray-500 text-xs">{phone.totalBids} bids</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-green-500 font-medium">₹{(phone.platformCommission || 0).toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs">Payout: ₹{(phone.sellerPayout || 0).toLocaleString()}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        {phone.escrowStatus && <StatusBadge status={phone.escrowStatus} />}
+                        {phone.meetingStatus && <StatusBadge status={phone.meetingStatus} />}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-gray-400 text-sm">
+                        {phone.soldAt ? new Date(phone.soldAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                      <p className="text-gray-600 text-xs">
+                        {phone.soldAt ? new Date(phone.soldAt).toLocaleTimeString() : ''}
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+);
 
 // Search Results Tab - Responsive
 const SearchResultsTab = ({ results, onViewUser }) => {

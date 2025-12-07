@@ -7,7 +7,8 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 15000
 });
 
 // Add token to requests
@@ -110,6 +111,7 @@ export const adminAPI = {
   updateTransactionNotes: (id, adminNotes) => api.put(`/admin/transactions/${id}/notes`, { adminNotes }),
   searchByIds: (query) => api.get('/admin/search', { params: { query } }),
   getPlatformStatistics: () => api.get('/admin/statistics'),
+  getSoldPhones: (params) => api.get('/admin/sold-phones', { params }),
   getAllComplaints: (params) => api.get('/admin/complaints', { params }),
   updateComplaint: (id, data) => api.put(`/admin/complaints/${id}`, data)
 };

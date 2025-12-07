@@ -19,12 +19,24 @@ const CreatePhoneListing = () => {
     minBidPrice: '',
     auctionDuration: '7',
     location: '',
+    state: '',
+    city: '',
     accessories: {
       charger: false,
       bill: false,
       box: false
     }
   });
+
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+    'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Delhi', 'Chandigarh', 'Puducherry'
+  ];
   const [images, setImages] = useState(['', '', '', '', '', '']);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -389,15 +401,46 @@ const CreatePhoneListing = () => {
                   />
                 </div>
 
-                {/* Device Location */}
+                {/* Device Location - State */}
                 <div>
-                  <label className="text-gray-400 text-sm mb-2 block">Device Location (City)</label>
+                  <label className="text-gray-400 text-sm mb-2 block">State</label>
+                  <select
+                    name="state"
+                    value={formData.state}
+                    onChange={(e) => {
+                      const state = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        state: state,
+                        location: prev.city ? `${prev.city}, ${state}` : state
+                      }));
+                    }}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                    required
+                  >
+                    <option value="">Select State</option>
+                    {indianStates.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Device Location - City */}
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">City</label>
                   <input
                     type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="e.g., Mumbai, Delhi"
+                    name="city"
+                    value={formData.city}
+                    onChange={(e) => {
+                      const city = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        city: city,
+                        location: city && prev.state ? `${city}, ${prev.state}` : (prev.state || city)
+                      }));
+                    }}
+                    placeholder="e.g., Ludhiana, Mumbai"
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
                     required
                   />

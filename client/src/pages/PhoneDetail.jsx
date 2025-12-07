@@ -99,6 +99,12 @@ const PhoneDetail = () => {
   const isOwner = isAuthenticated && user && phone && 
     (user.anonymousId === phone.anonymousSellerId || user._id === phone.sellerId);
 
+  // Check if auction is truly active (not ended, not sold, status is active)
+  const isAuctionActive = auction && 
+    auction.status === 'active' && 
+    !timeRemaining.ended && 
+    phone?.status === 'live';
+
   // Handle accept bid
   const handleAcceptBid = async () => {
     if (!selectedBidToAccept) return;
@@ -123,7 +129,24 @@ const PhoneDetail = () => {
     }
   };
 
-  const openAcceptModal = (bid) => {
+  const openAcceptModal = async (bid) => {
+    // Refresh auction data before showing modal to ensure we have latest status
+    try {
+      const auctionRes = await auctionAPI.getAuctionByPhoneId(id);
+      if (auctionRes?.data?.data) {
+        const latestAuction = auctionRes.data.data;
+        setAuction(latestAuction);
+        
+        // Check if auction is still active
+        if (latestAuction.status !== 'active') {
+          setError(`Cannot accept bid - auction status is: ${latestAuction.status}`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Error refreshing auction:', err);
+    }
+    
     setSelectedBidToAccept(bid);
     setShowAcceptModal(true);
   };
@@ -290,14 +313,21 @@ const PhoneDetail = () => {
               <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-white">Auction Details</h2>
-                  {(auction.status === 'active' || !timeRemaining.ended) && (
+                  {auction.status === 'active' && !timeRemaining.ended ? (
                     <span className="bg-[#c4ff0d] text-black text-xs font-bold px-3 py-1 rounded">
                       LIVE
                     </span>
-                  )}
-                  {timeRemaining.ended && (
+                  ) : auction.status === 'ended' || auction.status === 'completed' ? (
+                    <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded">
+                      SOLD
+                    </span>
+                  ) : timeRemaining.ended ? (
                     <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded">
                       ENDED
+                    </span>
+                  ) : (
+                    <span className="bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded">
+                      {auction.status?.toUpperCase() || 'UNKNOWN'}
                     </span>
                   )}
                 </div>
@@ -342,8 +372,25 @@ const PhoneDetail = () => {
                   )}
                 </div>
 
+                {/* Auction Status Warning */}
+                {auction.status !== 'active' && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
+                    <p className="text-sm text-red-400 mb-2">
+                      {auction.status === 'ended' || auction.status === 'completed' 
+                        ? 'This auction has ended. The phone has been sold.' 
+                        : `Auction is not active (Status: ${auction.status})`}
+                    </p>
+                    <button
+                      onClick={loadPhoneDetails}
+                      className="text-xs text-[#c4ff0d] hover:underline"
+                    >
+                      Refresh to check latest status
+                    </button>
+                  </div>
+                )}
+
                 {/* Bid Form - Show for active auctions */}
-                {!timeRemaining.ended && (
+                {!timeRemaining.ended && auction.status === 'active' && (
                   <>
                     {isAuthenticated ? (
                       <form onSubmit={handlePlaceBid} className="space-y-4">
@@ -507,7 +554,7 @@ const PhoneDetail = () => {
             <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-white">Bid History</h3>
-                {isOwner && bids.length > 0 && !timeRemaining.ended && auction?.status === 'active' && (
+                {isOwner && bids.length > 0 && isAuctionActive && (
                   <span className="text-xs text-gray-400 bg-[#1a1a1a] px-3 py-1 rounded-full">
                     You can accept any bid
                   </span>
@@ -550,8 +597,8 @@ const PhoneDetail = () => {
                           <p className={`text-xl font-bold ${bid.isWinning ? 'text-[#c4ff0d]' : 'text-white'}`}>
                             ₹{bid.bidAmount.toLocaleString()}
                           </p>
-                          {/* Accept Bid Button - Only visible to the seller/owner of the phone */}
-                          {isOwner && !timeRemaining.ended && auction?.status === 'active' && (
+                          {/* Accept Bid Button - Only visible to the seller/owner of the phone when auction is truly active */}
+                          {isOwner && isAuctionActive && (
                             <button
                               onClick={() => openAcceptModal(bid)}
                               className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition"

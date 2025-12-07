@@ -102,7 +102,7 @@ export const createPhone = async (req, res) => {
  */
 export const getAllPhones = async (req, res) => {
   try {
-    const { status, brand, condition, minPrice, maxPrice, location } = req.query;
+    const { status, brand, condition, minPrice, maxPrice, location, state, city } = req.query;
     
     const query = {};
     
@@ -115,10 +115,34 @@ export const getAllPhones = async (req, res) => {
     
     if (brand) query.brand = brand;
     if (condition) query.condition = condition;
-    if (location) {
-      // Case-insensitive location search
-      query.location = { $regex: location, $options: 'i' };
+    
+    // Location filter - supports city, state, or combined search
+    if (location || state || city) {
+      const locationConditions = [];
+      
+      if (location) {
+        // Search for the combined location string (e.g., "Ludhiana, Punjab")
+        locationConditions.push({ location: { $regex: location, $options: 'i' } });
+      }
+      
+      if (state) {
+        // Search for state in location field
+        locationConditions.push({ location: { $regex: state, $options: 'i' } });
+      }
+      
+      if (city) {
+        // Search for city in location field
+        locationConditions.push({ location: { $regex: city, $options: 'i' } });
+      }
+      
+      // If both city and state provided, search for phones matching either or both
+      if (locationConditions.length > 1) {
+        query.$and = locationConditions;
+      } else if (locationConditions.length === 1) {
+        query.location = locationConditions[0].location;
+      }
     }
+    
     if (minPrice || maxPrice) {
       query.minBidPrice = {};
       if (minPrice) query.minBidPrice.$gte = Number(minPrice);
@@ -192,11 +216,15 @@ export const getPhoneById = async (req, res) => {
 };
 
 /**
- * Get seller's phones
+ * Get seller's phones (excludes sold phones - they have their own endpoint)
  */
 export const getSellerPhones = async (req, res) => {
   try {
-    const phones = await Phone.find({ sellerId: req.userId }).sort({ createdAt: -1 });
+    // Exclude sold phones - they appear in the "Sold Phones" tab
+    const phones = await Phone.find({ 
+      sellerId: req.userId,
+      status: { $ne: 'sold' }
+    }).sort({ createdAt: -1 });
     
     const phonesData = phones.map(phone => phone.toSellerObject());
     

@@ -357,11 +357,28 @@ export const acceptBid = async (req, res) => {
     
     // Check if auction is still active
     if (auction.status !== 'active') {
+      console.log('Auction status check failed:', {
+        auctionId: auction._id,
+        status: auction.status,
+        phoneId: auction.phoneId,
+        phoneStatus: phone.status
+      });
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Auction is not active',
+          message: `Auction is not active (current status: ${auction.status})`,
           code: 'AUCTION_NOT_ACTIVE'
+        }
+      });
+    }
+    
+    // Also check if phone is still live
+    if (phone.status !== 'live') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `Phone is not available for auction (status: ${phone.status})`,
+          code: 'PHONE_NOT_AVAILABLE'
         }
       });
     }

@@ -87,11 +87,12 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for efficient queries
-// Note: email, googleId, and anonymousId already have indexes from unique/sparse
-// userSchema.index({ email: 1 });
-// userSchema.index({ googleId: 1 });
-// userSchema.index({ anonymousId: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ googleId: 1 });
+userSchema.index({ anonymousId: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ kycStatus: 1 });
+userSchema.index({ createdAt: -1 });
 
 // Pre-save hook to generate anonymousId
 userSchema.pre('save', function(next) {

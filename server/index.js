@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import compression from 'compression';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/database.js';
@@ -45,6 +46,7 @@ const io = new Server(server, {
 connectDB();
 
 // Middleware
+app.use(compression());
 app.use(cors({
   origin: function (origin, callback) {
     console.log('CORS Origin:', origin);
@@ -77,6 +79,14 @@ app.use((req, res, next) => {
 // Increase payload size limit for image uploads (base64 encoded images)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Cache control middleware for static responses
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
