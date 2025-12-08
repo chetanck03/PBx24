@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Upload, Video, X, Loader2, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Upload, Video, X, Loader2, Clock, AlertCircle, Image as ImageIcon, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { reelAPI } from '../../services/reelService';
 import toast from 'react-hot-toast';
 
@@ -49,6 +49,8 @@ const UploadReel = ({ onUploadSuccess }) => {
                 <OptionSelector onSelect={setMode} />
               ) : mode === 'upload' ? (
                 <UploadFromDevice onSuccess={handleSuccess} onBack={() => setMode(null)} />
+              ) : mode === 'images' ? (
+                <UploadImages onSuccess={handleSuccess} onBack={() => setMode(null)} />
               ) : (
                 <RecordVideo onSuccess={handleSuccess} onBack={() => setMode(null)} />
               )}
@@ -62,27 +64,38 @@ const UploadReel = ({ onUploadSuccess }) => {
 
 const OptionSelector = ({ onSelect }) => {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-3 gap-3">
       <button
         onClick={() => onSelect('upload')}
-        className="flex flex-col items-center gap-3 p-6 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-xl transition"
+        className="flex flex-col items-center gap-3 p-4 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-xl transition"
       >
-        <div className="w-16 h-16 bg-[#c4ff0d]/20 rounded-full flex items-center justify-center">
-          <Upload className="w-8 h-8 text-[#c4ff0d]" />
+        <div className="w-14 h-14 bg-[#c4ff0d]/20 rounded-full flex items-center justify-center">
+          <Upload className="w-7 h-7 text-[#c4ff0d]" />
         </div>
-        <span className="text-white font-medium">Upload Video</span>
-        <span className="text-gray-500 text-sm text-center">From Device</span>
+        <span className="text-white font-medium text-sm">Upload Video</span>
+        <span className="text-gray-500 text-xs text-center">Max 30s</span>
       </button>
 
       <button
         onClick={() => onSelect('record')}
-        className="flex flex-col items-center gap-3 p-6 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-xl transition"
+        className="flex flex-col items-center gap-3 p-4 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-xl transition"
       >
-        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-          <Video className="w-8 h-8 text-red-500" />
+        <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center">
+          <Video className="w-7 h-7 text-red-500" />
         </div>
-        <span className="text-white font-medium">Record Video</span>
-        <span className="text-gray-500 text-sm text-center">Max 30 seconds</span>
+        <span className="text-white font-medium text-sm">Record Video</span>
+        <span className="text-gray-500 text-xs text-center">Max 30s</span>
+      </button>
+
+      <button
+        onClick={() => onSelect('images')}
+        className="flex flex-col items-center gap-3 p-4 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-xl transition"
+      >
+        <div className="w-14 h-14 bg-blue-500/20 rounded-full flex items-center justify-center">
+          <ImageIcon className="w-7 h-7 text-blue-500" />
+        </div>
+        <span className="text-white font-medium text-sm">Upload Photos</span>
+        <span className="text-gray-500 text-xs text-center">Up to 10</span>
       </button>
     </div>
   );
@@ -234,6 +247,244 @@ const UploadFromDevice = ({ onSuccess, onBack }) => {
           onClick={handleUpload}
           disabled={!file || uploading}
           className="flex-1 px-4 py-3 bg-[#c4ff0d] hover:bg-[#d4ff3d] text-black font-semibold rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="w-5 h-5" />
+              Upload
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const UploadImages = ({ onSuccess, onBack }) => {
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [currentPreview, setCurrentPreview] = useState(0);
+  const [description, setDescription] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (!selectedFiles.length) return;
+
+    setError(null);
+
+    // Validate file count
+    if (selectedFiles.length + files.length > 10) {
+      setError('Maximum 10 images allowed');
+      return;
+    }
+
+    // Validate each file
+    const validFiles = [];
+    const newPreviews = [];
+
+    for (const file of selectedFiles) {
+      if (!file.type.startsWith('image/')) {
+        setError('Only image files are allowed');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Each image must be less than 10MB');
+        return;
+      }
+      validFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    }
+
+    setFiles(prev => [...prev, ...validFiles]);
+    setPreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removeImage = (index) => {
+    URL.revokeObjectURL(previews[index]);
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+    if (currentPreview >= index && currentPreview > 0) {
+      setCurrentPreview(prev => prev - 1);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+
+    try {
+      setUploading(true);
+      setProgress(0);
+
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file));
+      formData.append('description', description);
+
+      const response = await reelAPI.uploadImageReel(formData, (progressEvent) => {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setProgress(percent);
+      });
+
+      toast.success('Photos uploaded successfully!');
+      onSuccess(response.data.data);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error?.message || 'Failed to upload photos');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {files.length === 0 ? (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-[#2a2a2a] hover:border-blue-500 rounded-xl p-8 text-center cursor-pointer transition"
+        >
+          <ImageIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+          <p className="text-white font-medium mb-1">Click to select photos</p>
+          <p className="text-gray-500 text-sm">JPEG, PNG, GIF, WebP (max 10 images, 10MB each)</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Main preview with navigation */}
+          <div className="relative aspect-[9/16] max-h-64 bg-black rounded-xl overflow-hidden mx-auto">
+            <img
+              src={previews[currentPreview]}
+              alt={`Preview ${currentPreview + 1}`}
+              className="w-full h-full object-contain"
+            />
+            
+            {/* Navigation arrows */}
+            {previews.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentPreview(prev => Math.max(0, prev - 1))}
+                  disabled={currentPreview === 0}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-5 h-5 text-white" />
+                </button>
+                <button
+                  onClick={() => setCurrentPreview(prev => Math.min(previews.length - 1, prev + 1))}
+                  disabled={currentPreview === previews.length - 1}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-5 h-5 text-white" />
+                </button>
+              </>
+            )}
+
+            {/* Image counter */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/70 rounded-full text-white text-xs">
+              {currentPreview + 1} / {previews.length}
+            </div>
+
+            {/* Remove button */}
+            <button
+              onClick={() => removeImage(currentPreview)}
+              className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full"
+            >
+              <Trash2 className="w-4 h-4 text-white" />
+            </button>
+          </div>
+
+          {/* Thumbnail strip */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-[#c4ff0d]">
+            {previews.map((preview, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentPreview(index)}
+                className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition ${
+                  currentPreview === index ? 'border-[#c4ff0d]' : 'border-transparent'
+                }`}
+              >
+                <img src={preview} alt={`Thumb ${index + 1}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+            {files.length < 10 && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-shrink-0 w-14 h-14 rounded-lg border-2 border-dashed border-[#2a2a2a] hover:border-blue-500 flex items-center justify-center transition"
+              >
+                <Plus className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <ImageIcon className="w-4 h-4" />
+            <span>{files.length} photo{files.length !== 1 ? 's' : ''} selected</span>
+          </div>
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add a description (optional)"
+            maxLength={500}
+            className="w-full px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-500 resize-none focus:outline-none focus:border-[#c4ff0d]"
+            rows={3}
+          />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 text-red-500 text-sm">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </div>
+      )}
+
+      {uploading && (
+        <div className="space-y-2">
+          <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-center text-sm text-gray-400">Uploading... {progress}%</p>
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={onBack}
+          disabled={uploading}
+          className="flex-1 px-4 py-3 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white rounded-xl transition disabled:opacity-50"
+        >
+          Back
+        </button>
+        <button
+          onClick={handleUpload}
+          disabled={files.length === 0 || uploading}
+          className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {uploading ? (
             <>

@@ -21,6 +21,7 @@ const PhoneDetail = () => {
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [selectedBidToAccept, setSelectedBidToAccept] = useState(null);
   const [acceptingBid, setAcceptingBid] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
 
   useEffect(() => {
     loadPhoneDetails();
@@ -152,8 +153,6 @@ const PhoneDetail = () => {
   };
 
   // Live countdown timer
-  const [timeRemaining, setTimeRemaining] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
-  
   useEffect(() => {
     if (!auction) return;
     
@@ -294,10 +293,18 @@ const PhoneDetail = () => {
                 </div>
               </div>
 
-              {/* Seller Info */}
+              {/* Seller Info - Clickable to view profile */}
               <div className="mb-6">
-                <p className="text-sm text-gray-500 mb-1">Seller (Anonymous)</p>
-                <p className="text-[#c4ff0d] font-semibold">{phone.anonymousSellerId}</p>
+                <p className="text-sm text-gray-500 mb-1">Seller</p>
+                <button
+                  onClick={() => navigate(`/user/${phone.anonymousSellerId}`)}
+                  className="flex items-center gap-2 text-[#c4ff0d] font-semibold hover:underline transition group"
+                >
+                  <div className="w-8 h-8 bg-[#c4ff0d]/20 rounded-full flex items-center justify-center group-hover:bg-[#c4ff0d]/30 transition">
+                    <User className="w-4 h-4 text-[#c4ff0d]" />
+                  </div>
+                  <span>@{phone.anonymousSellerId}</span>
+                </button>
               </div>
 
               {phone.location && (

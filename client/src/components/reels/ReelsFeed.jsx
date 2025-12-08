@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { reelAPI } from '../../services/reelService';
 import { useAuth } from '../../context/AuthContext';
-import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share2, Loader2, X, Send, Trash2, Eye } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share2, Loader2, X, Send, Trash2, Eye, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ReelsFeed = () => {
@@ -120,6 +121,7 @@ const ReelsFeed = () => {
 const viewedReelsInSession = new Set();
 
 const ReelItem = ({ reel, isActive, onUpdate }) => {
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -132,6 +134,19 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   const [likeLoading, setLikeLoading] = useState(false);
   const [viewCount, setViewCount] = useState(reel.views || 0);
   const viewTrackedRef = useRef(false);
+  
+  // For image carousel
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const isImageReel = reel.contentType === 'images' && reel.images?.length > 0;
+
+  // Navigate to user's public profile
+  const handleUserClick = (e) => {
+    e.stopPropagation();
+    const anonymousId = reel.userId?.anonymousId;
+    if (anonymousId) {
+      navigate(`/user/${anonymousId}`);
+    }
+  };
 
   useEffect(() => {
     // Check if user has liked this reel
@@ -159,6 +174,8 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   }, [isActive, reel._id, onUpdate]);
 
   useEffect(() => {
+    if (isImageReel) return; // Skip video logic for image reels
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -170,9 +187,11 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
       video.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, isImageReel]);
 
   const togglePlay = () => {
+    if (isImageReel) return; // No play/pause for images
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -186,10 +205,27 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
 
   const toggleMute = (e) => {
     e.stopPropagation();
+    if (isImageReel) return;
+    
     const video = videoRef.current;
     if (!video) return;
     video.muted = !isMuted;
     setIsMuted(!isMuted);
+  };
+
+  // Image carousel navigation
+  const nextImage = (e) => {
+    e.stopPropagation();
+    if (currentImageIndex < reel.images.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+    }
+  };
+
+  const prevImage = (e) => {
+    e.stopPropagation();
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+    }
   };
 
   const handleLike = async (e) => {
@@ -229,41 +265,96 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
-      <video
-        ref={videoRef}
-        src={reel.videoUrl}
-        className="h-full w-full object-contain max-w-md mx-auto"
-        loop
-        muted={isMuted}
-        playsInline
-        preload="metadata"
-        poster={reel.thumbnailUrl}
-      />
+      {isImageReel ? (
+        /* Image Carousel */
+        <>
+          <img
+            src={reel.images[currentImageIndex]?.url}
+            alt={`Image ${currentImageIndex + 1}`}
+            className="h-full w-full object-contain max-w-md mx-auto"
+          />
+          
+          {/* Image navigation arrows */}
+          {reel.images.length > 1 && (
+            <>
+              <button
+                onClick={prevImage}
+                disabled={currentImageIndex === 0}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </button>
+              <button
+                onClick={nextImage}
+                disabled={currentImageIndex === reel.images.length - 1}
+                className="absolute right-16 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronRight className="w-6 h-6 text-white" />
+              </button>
+            </>
+          )}
 
-      {/* Play/Pause overlay */}
-      {showControls && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity">
-          <button className="p-4 rounded-full bg-black/50">
-            {isPlaying ? (
-              <Pause className="w-12 h-12 text-white" />
+          {/* Image indicator dots */}
+          {reel.images.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {reel.images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }}
+                  className={`w-2 h-2 rounded-full transition ${
+                    index === currentImageIndex ? 'bg-white' : 'bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Image counter badge */}
+          <div className="absolute top-4 right-4 px-3 py-1 bg-black/50 rounded-full flex items-center gap-1.5">
+            <ImageIcon className="w-4 h-4 text-white" />
+            <span className="text-white text-sm">{currentImageIndex + 1}/{reel.images.length}</span>
+          </div>
+        </>
+      ) : (
+        /* Video Player */
+        <>
+          <video
+            ref={videoRef}
+            src={reel.videoUrl}
+            className="h-full w-full object-contain max-w-md mx-auto"
+            loop
+            muted={isMuted}
+            playsInline
+            preload="metadata"
+            poster={reel.thumbnailUrl}
+          />
+
+          {/* Play/Pause overlay */}
+          {showControls && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity">
+              <button className="p-4 rounded-full bg-black/50">
+                {isPlaying ? (
+                  <Pause className="w-12 h-12 text-white" />
+                ) : (
+                  <Play className="w-12 h-12 text-white" />
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Mute button */}
+          <button
+            onClick={toggleMute}
+            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition"
+          >
+            {isMuted ? (
+              <VolumeX className="w-5 h-5 text-white" />
             ) : (
-              <Play className="w-12 h-12 text-white" />
+              <Volume2 className="w-5 h-5 text-white" />
             )}
           </button>
-        </div>
+        </>
       )}
-
-      {/* Mute button */}
-      <button
-        onClick={toggleMute}
-        className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition"
-      >
-        {isMuted ? (
-          <VolumeX className="w-5 h-5 text-white" />
-        ) : (
-          <Volume2 className="w-5 h-5 text-white" />
-        )}
-      </button>
 
       {/* Right side actions */}
       <div className="absolute right-4 bottom-24 flex flex-col gap-4">
@@ -311,16 +402,27 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
 
       {/* Bottom info */}
       <div className="absolute bottom-4 left-4 right-20 text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-10 h-10 rounded-full bg-[#c4ff0d] flex items-center justify-center">
-            <span className="text-black font-bold">
-              {reel.userId?.name?.charAt(0) || 'U'}
-            </span>
-          </div>
-          <span className="font-semibold">
-            {reel.userId?.anonymousId || 'Anonymous'}
+        <button 
+          onClick={handleUserClick}
+          className="flex items-center gap-2 mb-2 hover:opacity-80 transition cursor-pointer"
+        >
+          {reel.userId?.avatar ? (
+            <img 
+              src={reel.userId.avatar} 
+              alt={reel.userId?.name || 'User'} 
+              className="w-10 h-10 rounded-full object-cover border-2 border-[#c4ff0d]"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-[#c4ff0d] flex items-center justify-center">
+              <span className="text-black font-bold">
+                {reel.userId?.name?.charAt(0) || 'U'}
+              </span>
+            </div>
+          )}
+          <span className="font-semibold hover:underline">
+            @{reel.userId?.anonymousId || 'Anonymous'}
           </span>
-        </div>
+        </button>
         {reel.description && (
           <p className="text-sm text-gray-200 line-clamp-2">{reel.description}</p>
         )}
@@ -339,6 +441,7 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
 };
 
 const CommentsModal = ({ reel, onClose, onCommentsUpdate }) => {
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -346,6 +449,14 @@ const CommentsModal = ({ reel, onClose, onCommentsUpdate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  // Navigate to user's public profile
+  const handleCommentUserClick = (anonymousId) => {
+    if (anonymousId) {
+      onClose();
+      navigate(`/user/${anonymousId}`);
+    }
+  };
 
   useEffect(() => {
     fetchComments(1);
@@ -443,16 +554,22 @@ const CommentsModal = ({ reel, onClose, onCommentsUpdate }) => {
             <>
               {comments.map((comment) => (
                 <div key={comment._id} className="flex gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#c4ff0d] flex items-center justify-center flex-shrink-0">
+                  <button 
+                    onClick={() => handleCommentUserClick(comment.userId?.anonymousId)}
+                    className="w-9 h-9 rounded-full bg-[#c4ff0d] flex items-center justify-center flex-shrink-0 hover:opacity-80 transition cursor-pointer"
+                  >
                     <span className="text-black font-bold text-sm">
                       {comment.userId?.name?.charAt(0) || 'U'}
                     </span>
-                  </div>
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-medium text-sm">
-                        {comment.userId?.anonymousId || 'Anonymous'}
-                      </span>
+                      <button 
+                        onClick={() => handleCommentUserClick(comment.userId?.anonymousId)}
+                        className="text-white font-medium text-sm hover:underline cursor-pointer"
+                      >
+                        @{comment.userId?.anonymousId || 'Anonymous'}
+                      </button>
                       <span className="text-gray-500 text-xs">
                         {formatTime(comment.createdAt)}
                       </span>

@@ -36,20 +36,75 @@ const AdminDashboard = () => {
   const loadDashboardData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [statsRes, usersRes, phonesRes, transactionsRes] = await Promise.all([
+      
+      // Use Promise.allSettled to handle partial failures gracefully
+      const results = await Promise.allSettled([
         adminAPI.getPlatformStatistics(),
         adminAPI.getAllUsers({ limit: 100 }),
         adminAPI.getAllPhones({ limit: 100 }),
         adminAPI.getAllTransactions({ limit: 100 })
       ]);
-      setStats(statsRes.data.data);
-      setUsers(usersRes.data.data || []);
-      setPhones(phonesRes.data.data || []);
-      setTransactions(transactionsRes.data.data || []);
+
+      // Extract data from successful requests, use fallback for failed ones
+      const [statsResult, usersResult, phonesResult, transactionsResult] = results;
+
+      // Default stats structure for fallback
+      const defaultStats = {
+        users: { total: 0, buyers: 0, admins: 0 },
+        phones: { total: 0, live: 0, pending: 0 },
+        auctions: { total: 0, active: 0, completed: 0, cancelled: 0 },
+        bids: { total: 0, winning: 0 },
+        revenue: { totalPlatformCommission: 0, totalSellerPayouts: 0, totalTransactionValue: 0 }
+      };
+
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value.data.data || defaultStats);
+      } else {
+        console.error('Stats fetch failed:', statsResult.reason);
+        // Set default stats so UI can render
+        setStats(prev => prev || defaultStats);
+      }
+
+      if (usersResult.status === 'fulfilled') {
+        setUsers(usersResult.value.data.data || []);
+      } else {
+        console.error('Users fetch failed:', usersResult.reason);
+      }
+
+      if (phonesResult.status === 'fulfilled') {
+        setPhones(phonesResult.value.data.data || []);
+      } else {
+        console.error('Phones fetch failed:', phonesResult.reason);
+      }
+
+      if (transactionsResult.status === 'fulfilled') {
+        setTransactions(transactionsResult.value.data.data || []);
+      } else {
+        console.error('Transactions fetch failed:', transactionsResult.reason);
+      }
+
       setLastUpdated(new Date());
+
+      // Show error only if all requests failed
+      const allFailed = results.every(r => r.status === 'rejected');
+      if (allFailed && !silent) {
+        toast.error('Unable to connect to server. Please check if the backend is running.');
+      } else if (results.some(r => r.status === 'rejected') && !silent) {
+        toast.error('Some data failed to load. Showing available data.');
+      }
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      toast.error('Failed to load dashboard data');
+      if (!silent) {
+        toast.error('Failed to load dashboard data');
+      }
+      // Set default stats so UI doesn't get stuck
+      setStats(prev => prev || {
+        users: { total: 0, buyers: 0, admins: 0 },
+        phones: { total: 0, live: 0, pending: 0 },
+        auctions: { total: 0, active: 0, completed: 0, cancelled: 0 },
+        bids: { total: 0, winning: 0 },
+        revenue: { totalPlatformCommission: 0, totalSellerPayouts: 0, totalTransactionValue: 0 }
+      });
     } finally {
       if (!silent) setLoading(false);
     }
@@ -329,16 +384,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 const OverviewTab = ({ stats, users, phones, transactions, autoRefresh, setAutoRefresh, lastUpdated }) => {
   const CHART_COLORS = ['#c4ff0d', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
 
-  if (!stats) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 text-[#c4ff0d] animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
+  // Use safe defaults if stats is null/undefined
+  const safeStats = stats || {
+    users: { total: 0, buyers: 0, admins: 0 },
+    phones: { total: 0, live: 0, pending: 0 },
+    auctions: { total: 0, active: 0, completed: 0, cancelled: 0 },
+    bids: { total: 0, winning: 0 },
+    revenue: { totalPlatformCommission: 0, totalSellerPayouts: 0, totalTransactionValue: 0 }
+  };
 
   // Generate activity data from users (last 7 days simulation based on actual data)
   const generateActivityData = () => {
@@ -360,39 +413,39 @@ const OverviewTab = ({ stats, users, phones, transactions, autoRefresh, setAutoR
 
   // Phone status distribution for pie chart
   const phoneStatusData = [
-    { name: 'Approved', value: stats.phones?.live || 0, color: '#10b981' },
-    { name: 'Pending', value: stats.phones?.pending || 0, color: '#f59e0b' },
-    { name: 'Rejected', value: Math.max(0, (stats.phones?.total || 0) - (stats.phones?.live || 0) - (stats.phones?.pending || 0)), color: '#ef4444' },
+    { name: 'Approved', value: safeStats.phones?.live || 0, color: '#10b981' },
+    { name: 'Pending', value: safeStats.phones?.pending || 0, color: '#f59e0b' },
+    { name: 'Rejected', value: Math.max(0, (safeStats.phones?.total || 0) - (safeStats.phones?.live || 0) - (safeStats.phones?.pending || 0)), color: '#ef4444' },
   ].filter(item => item.value > 0);
 
   // User role distribution
   const userRoleData = [
-    { name: 'Buyers', value: stats.users?.buyers || 0, color: '#3b82f6' },
-    { name: 'Sellers', value: Math.max(0, (stats.users?.total || 0) - (stats.users?.buyers || 0) - (stats.users?.admins || 0)), color: '#8b5cf6' },
-    { name: 'Admins', value: stats.users?.admins || 0, color: '#c4ff0d' },
+    { name: 'Buyers', value: safeStats.users?.buyers || 0, color: '#3b82f6' },
+    { name: 'Sellers', value: Math.max(0, (safeStats.users?.total || 0) - (safeStats.users?.buyers || 0) - (safeStats.users?.admins || 0)), color: '#8b5cf6' },
+    { name: 'Admins', value: safeStats.users?.admins || 0, color: '#c4ff0d' },
   ].filter(item => item.value > 0);
 
   // Auction metrics for bar chart
   const auctionMetrics = [
-    { name: 'Active', value: stats.auctions?.active || 0, fill: '#c4ff0d' },
-    { name: 'Completed', value: stats.auctions?.completed || 0, fill: '#10b981' },
-    { name: 'Cancelled', value: stats.auctions?.cancelled || 0, fill: '#ef4444' },
+    { name: 'Active', value: safeStats.auctions?.active || 0, fill: '#c4ff0d' },
+    { name: 'Completed', value: safeStats.auctions?.completed || 0, fill: '#10b981' },
+    { name: 'Cancelled', value: safeStats.auctions?.cancelled || 0, fill: '#ef4444' },
   ];
 
   // Revenue breakdown for bar chart
   const revenueData = [
-    { name: 'Commission', value: stats.revenue?.totalPlatformCommission || 0, fill: '#10b981' },
-    { name: 'Payouts', value: stats.revenue?.totalSellerPayouts || 0, fill: '#3b82f6' },
-    { name: 'Total Value', value: stats.revenue?.totalTransactionValue || 0, fill: '#8b5cf6' },
+    { name: 'Commission', value: safeStats.revenue?.totalPlatformCommission || 0, fill: '#10b981' },
+    { name: 'Payouts', value: safeStats.revenue?.totalSellerPayouts || 0, fill: '#3b82f6' },
+    { name: 'Total Value', value: safeStats.revenue?.totalTransactionValue || 0, fill: '#8b5cf6' },
   ];
 
   const activityData = generateActivityData();
 
   const statCards = [
-    { label: 'Total Users', value: stats.users?.total || 0, sub: `${stats.users?.buyers || 0} buyers, ${stats.users?.admins || 0} admins`, icon: Users, color: 'from-blue-500 to-blue-600' },
-    { label: 'Total Phones', value: stats.phones?.total || 0, sub: `${stats.phones?.live || 0} live, ${stats.phones?.pending || 0} pending`, icon: Smartphone, color: 'from-green-500 to-green-600' },
-    { label: 'Active Auctions', value: stats.auctions?.active || 0, sub: `${stats.auctions?.total || 0} total auctions`, icon: Gavel, color: 'from-purple-500 to-purple-600' },
-    { label: 'Total Bids', value: stats.bids?.total || 0, sub: `${stats.bids?.winning || 0} winning bids`, icon: TrendingUp, color: 'from-orange-500 to-orange-600' },
+    { label: 'Total Users', value: safeStats.users?.total || 0, sub: `${safeStats.users?.buyers || 0} buyers, ${safeStats.users?.admins || 0} admins`, icon: Users, color: 'from-blue-500 to-blue-600' },
+    { label: 'Total Phones', value: safeStats.phones?.total || 0, sub: `${safeStats.phones?.live || 0} live, ${safeStats.phones?.pending || 0} pending`, icon: Smartphone, color: 'from-green-500 to-green-600' },
+    { label: 'Active Auctions', value: safeStats.auctions?.active || 0, sub: `${safeStats.auctions?.total || 0} total auctions`, icon: Gavel, color: 'from-purple-500 to-purple-600' },
+    { label: 'Total Bids', value: safeStats.bids?.total || 0, sub: `${safeStats.bids?.winning || 0} winning bids`, icon: TrendingUp, color: 'from-orange-500 to-orange-600' },
   ];
 
   return (

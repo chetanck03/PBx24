@@ -611,12 +611,18 @@ const EnhancedMarketplace = () => {
                           </div>
                         </div>
 
-                        {/* Seller Info */}
+                        {/* Seller Info - Clickable */}
                         <div className="pt-3 border-t border-[#2a2a2a]">
                           <div className="text-xs text-gray-500 mb-1">by</div>
-                          <span className="text-xs text-gray-400 font-mono">
-                            {phone.anonymousSellerId?.substring(0, 15)}...
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/user/${phone.anonymousSellerId}`);
+                            }}
+                            className="text-xs text-[#c4ff0d] font-mono hover:underline"
+                          >
+                            @{phone.anonymousSellerId}
+                          </button>
                         </div>
                       </div>
                     </div>

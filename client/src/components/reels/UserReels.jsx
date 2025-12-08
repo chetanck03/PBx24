@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { reelAPI } from '../../services/reelService';
-import { Play, Loader2, Trash2 } from 'lucide-react';
+import { Play, Loader2, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -99,51 +100,67 @@ const UserReels = ({ userId, showDeleteButton = false }) => {
   return (
     <>
       <div className="grid grid-cols-3 gap-1 sm:gap-2">
-        {reels.map((reel) => (
-          <div
-            key={reel._id}
-            className="relative aspect-[9/16] bg-[#1a1a1a] rounded-lg overflow-hidden cursor-pointer group"
-            onClick={() => setSelectedReel(reel)}
-          >
-            <img
-              src={reel.thumbnailUrl}
-              alt="Reel thumbnail"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <Play className="w-8 h-8 text-white" fill="white" />
-            </div>
-
-            {/* Duration badge */}
-            <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 rounded text-xs text-white">
-              {Math.round(reel.duration)}s
-            </div>
-
-            {/* Delete button */}
-            {(showDeleteButton || isOwner) && (
-              <button
-                onClick={(e) => handleDelete(reel._id, e)}
-                disabled={deleting === reel._id}
-                className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                {deleting === reel._id ? (
-                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+        {reels.map((reel) => {
+          const isImageReel = reel.contentType === 'images' && reel.images?.length > 0;
+          const thumbnailUrl = isImageReel ? reel.images[0]?.url : reel.thumbnailUrl;
+          
+          return (
+            <div
+              key={reel._id}
+              className="relative aspect-[9/16] bg-[#1a1a1a] rounded-lg overflow-hidden cursor-pointer group"
+              onClick={() => setSelectedReel(reel)}
+            >
+              <img
+                src={thumbnailUrl}
+                alt="Reel thumbnail"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                {isImageReel ? (
+                  <ImageIcon className="w-8 h-8 text-white" />
                 ) : (
-                  <Trash2 className="w-4 h-4 text-white" />
+                  <Play className="w-8 h-8 text-white" fill="white" />
                 )}
-              </button>
-            )}
+              </div>
 
-            {/* Views */}
-            <div className="absolute bottom-2 right-2 flex items-center gap-1 text-white text-xs">
-              <Play className="w-3 h-3" />
-              {reel.views || 0}
+              {/* Content type badge */}
+              <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 rounded text-xs text-white flex items-center gap-1">
+                {isImageReel ? (
+                  <>
+                    <ImageIcon className="w-3 h-3" />
+                    {reel.images.length}
+                  </>
+                ) : (
+                  <>{Math.round(reel.duration)}s</>
+                )}
+              </div>
+
+              {/* Delete button */}
+              {(showDeleteButton || isOwner) && (
+                <button
+                  onClick={(e) => handleDelete(reel._id, e)}
+                  disabled={deleting === reel._id}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  {deleting === reel._id ? (
+                    <Loader2 className="w-4 h-4 text-white animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 text-white" />
+                  )}
+                </button>
+              )}
+
+              {/* Views */}
+              <div className="absolute bottom-2 right-2 flex items-center gap-1 text-white text-xs">
+                <Play className="w-3 h-3" />
+                {reel.views || 0}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Load more button */}
@@ -175,6 +192,31 @@ const UserReels = ({ userId, showDeleteButton = false }) => {
 };
 
 const ReelModal = ({ reel, onClose }) => {
+  const navigate = useNavigate();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const isImageReel = reel.contentType === 'images' && reel.images?.length > 0;
+
+  const nextImage = () => {
+    if (currentImageIndex < reel.images.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+    }
+  };
+
+  const prevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+    }
+  };
+
+  // Navigate to user's public profile
+  const handleUserClick = () => {
+    const anonymousId = reel.userId?.anonymousId;
+    if (anonymousId) {
+      onClose();
+      navigate(`/user/${anonymousId}`);
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
@@ -191,25 +233,73 @@ const ReelModal = ({ reel, onClose }) => {
           ✕
         </button>
         
-        <video
-          src={reel.videoUrl}
-          className="w-full h-full max-h-[80vh] object-contain"
-          controls
-          autoPlay
-          loop
-        />
+        {isImageReel ? (
+          <div className="relative">
+            <img
+              src={reel.images[currentImageIndex]?.url}
+              alt={`Image ${currentImageIndex + 1}`}
+              className="w-full max-h-[80vh] object-contain"
+            />
+            
+            {/* Navigation arrows */}
+            {reel.images.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  disabled={currentImageIndex === 0}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-5 h-5 text-white" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  disabled={currentImageIndex === reel.images.length - 1}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-5 h-5 text-white" />
+                </button>
+              </>
+            )}
+
+            {/* Image counter */}
+            {reel.images.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/70 rounded-full text-white text-sm">
+                {currentImageIndex + 1} / {reel.images.length}
+              </div>
+            )}
+          </div>
+        ) : (
+          <video
+            src={reel.videoUrl}
+            className="w-full h-full max-h-[80vh] object-contain"
+            controls
+            autoPlay
+            loop
+          />
+        )}
 
         <div className="p-4 bg-[#0f0f0f]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-[#c4ff0d] flex items-center justify-center">
-              <span className="text-black font-bold text-sm">
-                {reel.userId?.name?.charAt(0) || 'U'}
-              </span>
-            </div>
-            <span className="text-white font-medium text-sm">
-              {reel.userId?.anonymousId || 'Anonymous'}
+          <button 
+            onClick={handleUserClick}
+            className="flex items-center gap-2 mb-2 hover:opacity-80 transition cursor-pointer"
+          >
+            {reel.userId?.avatar ? (
+              <img 
+                src={reel.userId.avatar} 
+                alt={reel.userId?.name || 'User'} 
+                className="w-8 h-8 rounded-full object-cover border-2 border-[#c4ff0d]"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#c4ff0d] flex items-center justify-center">
+                <span className="text-black font-bold text-sm">
+                  {reel.userId?.name?.charAt(0) || 'U'}
+                </span>
+              </div>
+            )}
+            <span className="text-white font-medium text-sm hover:underline">
+              @{reel.userId?.anonymousId || 'Anonymous'}
             </span>
-          </div>
+          </button>
           {reel.description && (
             <p className="text-gray-300 text-sm">{reel.description}</p>
           )}

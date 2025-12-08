@@ -51,4 +51,37 @@ export const generateThumbnailUrl = (videoUrl) => {
     .replace(/\.(mp4|webm|mov|avi)$/i, '.jpg');
 };
 
+// Upload image to Cloudinary
+export const uploadImage = async (fileBuffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: 'image',
+      folder: 'reels/images',
+      transformation: [
+        { width: 1080, height: 1920, crop: 'limit' }, // Max dimensions for portrait
+        { quality: 'auto:good' }
+      ],
+      ...options
+    };
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      uploadOptions,
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    uploadStream.end(fileBuffer);
+  });
+};
+
+// Delete image from Cloudinary
+export const deleteImage = async (publicId) => {
+  return cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+};
+
 export default cloudinary;

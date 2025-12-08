@@ -1,7 +1,7 @@
 import Reel from '../models/Reel.js';
-import { uploadVideo, deleteVideo, generateThumbnailUrl } from '../config/cloudinary.js';
+import { uploadVideo, deleteVideo, generateThumbnailUrl, uploadImage, deleteImage } from '../config/cloudinary.js';
 
-// Upload a new reel
+// Upload a new reel (video)
 export const uploadReel = async (req, res) => {
   try {
     if (!req.file) {
@@ -44,6 +44,7 @@ export const uploadReel = async (req, res) => {
     // Create reel in database
     const reel = new Reel({
       userId: req.user._id,
+      contentType: 'video',
       videoUrl: uploadResult.secure_url,
       thumbnailUrl: thumbnailUrl,
       cloudinaryPublicId: uploadResult.public_id,
@@ -65,6 +66,64 @@ export const uploadReel = async (req, res) => {
     res.status(500).json({
       success: false,
       error: { message: 'Failed to upload reel', details: error.message }
+    });
+  }
+};
+
+// Upload images as a reel (carousel post)
+export const uploadImageReel = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'No images provided' }
+      });
+    }
+
+    if (req.files.length > 10) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Maximum 10 images allowed per post' }
+      });
+    }
+
+    const { description } = req.body;
+
+    // Upload all images to Cloudinary
+    const uploadPromises = req.files.map(file => 
+      uploadImage(file.buffer, { folder: 'reels/images' })
+    );
+
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Create images array
+    const images = uploadResults.map(result => ({
+      url: result.secure_url,
+      publicId: result.public_id
+    }));
+
+    // Create reel in database
+    const reel = new Reel({
+      userId: req.user._id,
+      contentType: 'images',
+      images: images,
+      description: description || ''
+    });
+
+    await reel.save();
+
+    // Populate user info
+    await reel.populate('userId', 'name anonymousId avatar');
+
+    res.status(201).json({
+      success: true,
+      data: reel
+    });
+  } catch (error) {
+    console.error('Error uploading image reel:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to upload images', details: error.message }
     });
   }
 };
@@ -221,8 +280,14 @@ export const deleteReel = async (req, res) => {
       });
     }
 
-    // Delete from Cloudinary
-    await deleteVideo(reel.cloudinaryPublicId);
+    // Delete from Cloudinary based on content type
+    if (reel.contentType === 'video' && reel.cloudinaryPublicId) {
+      await deleteVideo(reel.cloudinaryPublicId);
+    } else if (reel.contentType === 'images' && reel.images?.length > 0) {
+      // Delete all images
+      const deletePromises = reel.images.map(img => deleteImage(img.publicId));
+      await Promise.all(deletePromises);
+    }
 
     // Delete from database
     await Reel.findByIdAndDelete(id);
@@ -506,11 +571,33 @@ export const checkLikeStatus = async (req, res) => {
 };
 
 // Get user reel statistics (total views, likes, etc.)
+// Supports both MongoDB ObjectId and anonymousId
 export const getUserReelStats = async (req, res) => {
   try {
     const { userId } = req.params;
+    
+    let actualUserId = userId;
+    
+    // Check if userId is an anonymousId (starts with USER_)
+    if (userId.startsWith('USER_') || userId.startsWith('SELLER_')) {
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findOne({ anonymousId: userId });
+      if (!user) {
+        return res.json({
+          success: true,
+          data: {
+            totalReels: 0,
+            totalViews: 0,
+            totalLikes: 0,
+            totalComments: 0,
+            reels: []
+          }
+        });
+      }
+      actualUserId = user._id;
+    }
 
-    const reels = await Reel.find({ userId, isActive: true });
+    const reels = await Reel.find({ userId: actualUserId, isActive: true });
 
     const stats = {
       totalReels: reels.length,
@@ -519,8 +606,10 @@ export const getUserReelStats = async (req, res) => {
       totalComments: reels.reduce((sum, reel) => sum + (reel.comments?.length || 0), 0),
       reels: reels.map(reel => ({
         _id: reel._id,
-        thumbnailUrl: reel.thumbnailUrl,
+        contentType: reel.contentType || 'video',
+        thumbnailUrl: reel.contentType === 'images' ? reel.images?.[0]?.url : reel.thumbnailUrl,
         videoUrl: reel.videoUrl,
+        images: reel.images,
         views: reel.views || 0,
         likes: reel.likes?.length || 0,
         comments: reel.comments?.length || 0,

@@ -2,14 +2,27 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-// Create axios instance
+// Create axios instance with optimized settings
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 15000
+  timeout: 30000 // Increased timeout for slower connections
 });
+
+// Retry configuration
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000;
+
+// Helper function to check if error is retryable
+const isRetryableError = (error) => {
+  return (
+    !error.response || // Network error
+    error.code === 'ECONNABORTED' || // Timeout
+    error.response?.status >= 500 // Server error
+  );
+};
 
 // Add token to requests
 api.interceptors.request.use(
@@ -18,6 +31,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Add retry count to config
+    config.retryCount = config.retryCount || 0;
     return config;
   },
   (error) => {
@@ -25,14 +40,43 @@ api.interceptors.request.use(
   }
 );
 
-// Handle response errors
+// Handle response errors with retry logic
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    
+    // Handle 401 - Unauthorized
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect if not already on auth pages
+      if (!window.location.pathname.includes('/auth/')) {
+        window.location.href = '/auth/signin';
+      }
+      return Promise.reject(error);
     }
+    
+    // Retry logic for retryable errors
+    if (isRetryableError(error) && config.retryCount < MAX_RETRIES) {
+      config.retryCount += 1;
+      console.log(`Retrying request (${config.retryCount}/${MAX_RETRIES}):`, config.url);
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * config.retryCount));
+      
+      return api(config);
+    }
+    
+    // Log error for debugging (only in development)
+    if (import.meta.env.DEV) {
+      console.error('API Error:', {
+        url: config?.url,
+        method: config?.method,
+        status: error.response?.status,
+        message: error.message
+      });
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -50,7 +94,8 @@ export const userAPI = {
   updateProfile: (data) => api.put('/users/profile', data),
   updateWallet: (amount, operation) => api.post('/users/wallet', { amount, operation }),
   submitKYC: (kycData) => api.post('/users/kyc', { kycData }),
-  getUserByAnonymousId: (anonymousId) => api.get(`/users/anonymous/${anonymousId}`)
+  getUserByAnonymousId: (anonymousId) => api.get(`/users/anonymous/${anonymousId}`),
+  getPublicProfile: (anonymousId) => api.get(`/users/public/${anonymousId}`)
 };
 
 // Phone API

@@ -24,23 +24,35 @@ const reelSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Content type: 'video' or 'images'
+  contentType: {
+    type: String,
+    enum: ['video', 'images'],
+    default: 'video'
+  },
+  // For video content
   videoUrl: {
     type: String,
-    required: true
+    required: function() { return this.contentType === 'video'; }
   },
   thumbnailUrl: {
     type: String,
-    required: true
+    required: function() { return this.contentType === 'video'; }
   },
   cloudinaryPublicId: {
     type: String,
-    required: true
+    required: function() { return this.contentType === 'video'; }
   },
   duration: {
     type: Number,
-    required: true,
+    required: function() { return this.contentType === 'video'; },
     max: [30, 'Video duration cannot exceed 30 seconds']
   },
+  // For image content (carousel)
+  images: [{
+    url: { type: String, required: true },
+    publicId: { type: String, required: true }
+  }],
   description: {
     type: String,
     default: '',

@@ -1,8 +1,9 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { uploadVideo, handleMulterError } from '../middleware/uploadMiddleware.js';
+import { uploadVideo, uploadImages, handleMulterError } from '../middleware/uploadMiddleware.js';
 import {
   uploadReel,
+  uploadImageReel,
   getAllReels,
   getUserReels,
   getReelById,
@@ -27,13 +28,22 @@ router.post('/:id/view', incrementReelView);  // Track view when reel is watched
 router.get('/:id', getReelById);
 router.get('/:id/comments', getComments);
 
-// Protected routes
+// Protected routes - Video upload
 router.post(
   '/upload',
   authenticateToken,
   uploadVideo.single('video'),
   handleMulterError,
   uploadReel
+);
+
+// Protected routes - Image upload (carousel)
+router.post(
+  '/upload/images',
+  authenticateToken,
+  uploadImages.array('images', 10),
+  handleMulterError,
+  uploadImageReel
 );
 
 router.get('/my/reels', authenticateToken, getMyReels);

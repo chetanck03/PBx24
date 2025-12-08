@@ -5,6 +5,7 @@ import {
   updateWalletBalance,
   submitKYC,
   getUserByAnonymousId,
+  getPublicProfile,
   toggleUserBan
 } from '../controllers/userController.js';
 import { requireAuth, requireAdmin } from '../middleware/accessControl.js';
@@ -19,6 +20,7 @@ router.post('/kyc', requireAuth, submitKYC);
 
 // Public routes
 router.get('/anonymous/:anonymousId', getUserByAnonymousId);
+router.get('/public/:anonymousId', getPublicProfile); // Public profile with stats
 
 // Admin routes
 router.put('/:userId/ban', requireAuth, requireAdmin, toggleUserBan);

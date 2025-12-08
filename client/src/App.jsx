@@ -28,8 +28,10 @@ const ListingDetail = lazy(() => import('./pages/ListingDetail'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Complaints = lazy(() => import('./pages/Complaints'));
 const Reels = lazy(() => import('./pages/Reels'));
+const Explore = lazy(() => import('./pages/Explore'));
 const Chatbot = lazy(() => import('./components/chatbot/Chatbot'));
 
 // Static Pages - lazy load
@@ -261,6 +263,15 @@ function AppContent() {
                         <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                         </svg>
+                      </button>
+                      <button
+                        onClick={() => navigate('/explore')}
+                        className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a] flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Explore
                       </button>
                       <button
                         onClick={() => navigate('/reels')}
@@ -500,6 +511,12 @@ function AppContent() {
                         </div>
                         <span>Upload Reel</span>
                       </button>
+                      <button onClick={() => { navigate('/explore'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Explore
+                      </button>
                       <button onClick={() => { navigate('/reels'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Reels</button>
                       <button onClick={() => { navigate('/dashboard'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Dashboard</button>
                       <button onClick={() => { navigate('/profile'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Profile</button>
@@ -554,6 +571,9 @@ function AppContent() {
               <Route path="/phone/:id" element={<PhoneDetail />} />
               <Route path="/listing/:id" element={<ListingDetail />} />
               
+              {/* Public Profile Route */}
+              <Route path="/user/:anonymousId" element={<PublicProfile />} />
+              
               {/* Dashboard Routes */}
               <Route 
                 path="/dashboard" 
@@ -600,6 +620,9 @@ function AppContent() {
               
               {/* Reels Route */}
               <Route path="/reels" element={<Reels />} />
+              
+              {/* Explore Route */}
+              <Route path="/explore" element={<Explore />} />
 
               {/* Static Pages */}
               <Route path="/how-it-works" element={<HowItWorks />} />

@@ -1,9 +1,19 @@
 import api from './api';
 
 export const reelAPI = {
-  // Upload a new reel
+  // Upload a new video reel
   uploadReel: (formData, onUploadProgress) => {
     return api.post('/reels/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
+  },
+
+  // Upload images as a reel (carousel)
+  uploadImageReel: (formData, onUploadProgress) => {
+    return api.post('/reels/upload/images', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },

@@ -466,7 +466,7 @@ const CreatePhoneListing = () => {
                         onClick={() => handleAccessoryChange(acc.key)}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${
                           formData.accessories[acc.key]
-                            ? 'bg-[#c4ff0d] bg-opacity-20 border border-[#c4ff0d]'
+                            ? 'bg-[#1a2a1a] border-2 border-[#c4ff0d]'
                             : 'bg-[#1a1a1a] border border-[#2a2a2a]'
                         }`}
                       >
@@ -481,7 +481,7 @@ const CreatePhoneListing = () => {
                             </svg>
                           )}
                         </div>
-                        <span className="text-gray-300 text-sm">{acc.label}</span>
+                        <span className={`text-sm font-medium ${formData.accessories[acc.key] ? 'text-[#c4ff0d]' : 'text-gray-300'}`}>{acc.label}</span>
                       </button>
                     ))}
                   </div>
