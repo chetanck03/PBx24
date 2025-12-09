@@ -32,12 +32,23 @@ const Complaints = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      console.log('Token:', token ? 'Present' : 'Missing');
+      console.log('API URL:', `${API_URL}/complaints/my-complaints`);
+      
       const response = await axios.get(`${API_URL}/complaints/my-complaints`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('Complaints response:', response.data);
       setComplaints(response.data.data || []);
     } catch (error) {
       console.error('Error loading complaints:', error);
+      console.error('Error details:', error.response?.data);
+      if (error.response?.status === 401) {
+        toast.error('Please login again to view complaints');
+      } else {
+        toast.error('Failed to load complaints');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,10 +65,12 @@ const Complaints = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/complaints`, formData, {
+      
+      const response = await axios.post(`${API_URL}/complaints`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+    
       toast.success('Complaint submitted successfully! Admin will review it soon.');
       setShowCreateModal(false);
       setFormData({
@@ -70,6 +83,7 @@ const Complaints = () => {
       });
       loadComplaints();
     } catch (error) {
+      
       toast.error(error.response?.data?.error?.message || 'Failed to submit complaint');
     } finally {
       setSubmitting(false);
@@ -372,7 +386,7 @@ const Complaints = () => {
                       value={formData.proof}
                       onChange={(e) => setFormData({ ...formData, proof: e.target.value })}
                       className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#2a2a2a] text-white rounded-xl focus:border-[#c4ff0d] focus:outline-none transition"
-                      placeholder="https://example.com/screenshot.jpg"
+                      placeholder="Drive / Video Link"
                     />
                   </div>
 
