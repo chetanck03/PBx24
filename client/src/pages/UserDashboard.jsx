@@ -19,7 +19,6 @@ const UserDashboard = () => {
     { id: 'my-bids', label: 'My Bids' },
     { id: 'sold-phones', label: 'Sold Phones' },
     { id: 'purchased-phones', label: 'Purchased' },
-    { id: 'wallet', label: 'Wallet' },
   ];
 
   useEffect(() => {
@@ -73,8 +72,7 @@ const UserDashboard = () => {
     phones: myPhones.length,
     bids: myBids.length,
     sold: soldPhones.length,
-    purchased: purchasedPhones.length,
-    wallet: user?.walletBalance || 0
+    purchased: purchasedPhones.length
   };
 
   return (
@@ -83,21 +81,18 @@ const UserDashboard = () => {
         {/* Mobile Header */}
         <div className="lg:hidden mb-4">
           <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#c4ff0d] rounded-full flex items-center justify-center">
-                  <span className="text-black text-xl font-bold">{user?.name?.charAt(0)}</span>
-                </div>
-                <div>
-                  <p className="text-white font-semibold">{user?.name}</p>
-                  <p className="text-[#c4ff0d] text-xs font-mono">{user?.anonymousId?.slice(0, 12)}...</p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-[#c4ff0d] rounded-full flex items-center justify-center">
+                <span className="text-black text-xl font-bold">{user?.name?.charAt(0)}</span>
               </div>
-              <p className="text-[#c4ff0d] font-bold">₹{stats.wallet}</p>
+              <div>
+                <p className="text-white font-semibold">{user?.name}</p>
+                <p className="text-[#c4ff0d] text-xs font-mono">{user?.anonymousId?.slice(0, 12)}...</p>
+              </div>
             </div>
             {/* Mobile Tab Selector */}
-            <div className="grid grid-cols-3 gap-2">
-              {menuItems.slice(0, 6).map((item) => (
+            <div className="grid grid-cols-2 gap-2">
+              {menuItems.map((item) => (
                 <button key={item.id} onClick={() => setActiveTab(item.id)}
                   className={`p-2 rounded-lg text-xs font-medium transition ${activeTab === item.id ? 'bg-[#c4ff0d] text-black' : 'bg-[#1a1a1a] text-gray-400'}`}>
                   {item.label}
@@ -109,30 +104,18 @@ const UserDashboard = () => {
 
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block w-80 flex-shrink-0">
-            <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6 sticky top-24">
-              <h2 className="text-2xl font-bold text-white mb-2">My Dashboard</h2>
-              <p className="text-gray-400 text-sm mb-8">Welcome back, {user?.name}</p>
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-16 h-16 bg-[#c4ff0d] rounded-full flex items-center justify-center">
-                    <span className="text-black text-2xl font-bold">{user?.name?.charAt(0)}</span>
+          <div className="hidden lg:block w-72 flex-shrink-0">
+            <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-5 sticky top-24">
+              <h2 className="text-xl font-bold text-white mb-2">My Dashboard</h2>
+              <p className="text-gray-400 text-sm mb-6">Welcome back, {user?.name}</p>
+              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#c4ff0d] rounded-full flex items-center justify-center">
+                    <span className="text-black text-xl font-bold">{user?.name?.charAt(0)}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold text-sm">Anonymous ID:</p>
                     <p className="text-[#c4ff0d] text-xs font-mono truncate">{user?.anonymousId}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-[#2a2a2a]">
-                  <div>
-                    <p className="text-gray-400 text-xs">Wallet Balance:</p>
-                    <p className="text-[#c4ff0d] text-xl font-bold">₹{stats.wallet}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-green-400 text-xs">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>KYC Verified</span>
                   </div>
                 </div>
               </div>
@@ -224,22 +207,7 @@ const UserDashboard = () => {
                   </div>
                 </button>
 
-                <button
-                  onClick={() => setActiveTab('wallet')}
-                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition ${
-                    activeTab === 'wallet'
-                      ? 'bg-[#c4ff0d] text-black'
-                      : 'text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
-                  }`}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  <div className="text-left">
-                    <p className="font-semibold">Wallet</p>
-                    <p className="text-xs opacity-70">₹{stats.wallet}</p>
-                  </div>
-                </button>
+
               </nav>
             </div>
           </div>
@@ -251,74 +219,79 @@ const UserDashboard = () => {
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8">Overview</h1>
                 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-xl p-4 sm:p-6">
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <p className="text-3xl sm:text-5xl font-bold text-white mb-1 sm:mb-2">{stats.phones}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">My Phones</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.phones}</p>
+                    <p className="text-xs text-gray-400">My Phones</p>
                   </div>
 
-                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-lg p-3 sm:p-4 hover:border-[#c4ff0d] transition relative">
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-[#c4ff0d] text-black text-[9px] sm:text-[10px] font-bold px-1 py-0.5 rounded">LIVE</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span className="bg-[#c4ff0d] text-black text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">LIVE</span>
                     </div>
-                    <p className="text-3xl sm:text-5xl font-bold text-white mb-1 sm:mb-2">{stats.bids}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">My Bids</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.bids}</p>
+                    <p className="text-xs text-gray-400">My Bids</p>
                   </div>
 
-                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-lg p-3 sm:p-4 hover:border-[#c4ff0d] transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <p className="text-3xl sm:text-5xl font-bold text-white mb-1 sm:mb-2">{stats.sold}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">Sold Phones</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.sold}</p>
+                    <p className="text-xs text-gray-400">Sold Phones</p>
                   </div>
 
-                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-lg p-3 sm:p-4 hover:border-[#c4ff0d] transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                       </svg>
                     </div>
-                    <p className="text-3xl sm:text-5xl font-bold text-white mb-1 sm:mb-2">{stats.purchased}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">Purchased</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.purchased}</p>
+                    <p className="text-xs text-gray-400">Purchased</p>
                   </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl sm:rounded-2xl p-4 sm:p-8">
-                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Quick Actions</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <button
+                <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg p-6 sm:p-8 mb-8 sm:mb-12">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 sm:mb-8">Quick Actions</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div
                       onClick={() => navigate('/create-listing')}
-                      className="bg-[#c4ff0d] text-black p-4 sm:p-6 rounded-xl hover:bg-[#d4ff3d] transition text-left"
+                      className="bg-[#c4ff0d] text-black p-6 sm:p-8 rounded-lg hover:bg-[#d4ff3d] transition cursor-pointer border-2 border-[#c4ff0d] hover:border-[#d4ff3d]"
                     >
-                      <p className="font-bold text-base sm:text-lg mb-1 sm:mb-2">List a Phone</p>
-                      <p className="text-xs sm:text-sm opacity-80">Sell your device</p>
-                    </button>
-                    <button
+                      <div className="flex items-center gap-3 mb-3">
+                        <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <p className="font-bold text-lg sm:text-xl">List a Phone</p>
+                      </div>
+                      <p className="text-sm sm:text-base opacity-80">Sell your device and reach thousands of buyers</p>
+                    </div>
+                    <div
                       onClick={() => navigate('/marketplace')}
-                      className="bg-[#1a1a1a] border border-[#2a2a2a] text-white p-4 sm:p-6 rounded-xl hover:border-[#c4ff0d] transition text-left"
+                      className="bg-[#1a1a1a] border-2 border-[#2a2a2a] text-white p-6 sm:p-8 rounded-lg hover:border-[#c4ff0d] hover:bg-[#1f1f1f] transition cursor-pointer"
                     >
-                      <p className="font-bold text-base sm:text-lg mb-1 sm:mb-2">Browse Phones</p>
-                      <p className="text-xs sm:text-sm text-gray-400">Find great deals</p>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('wallet')}
-                      className="bg-[#1a1a1a] border border-[#2a2a2a] text-white p-4 sm:p-6 rounded-xl hover:border-[#c4ff0d] transition text-left"
-                    >
-                      <p className="font-bold text-base sm:text-lg mb-1 sm:mb-2">Manage Wallet</p>
-                      <p className="text-xs sm:text-sm text-gray-400">Add or withdraw funds</p>
-                    </button>
+                      <div className="flex items-center gap-3 mb-3">
+                        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <p className="font-bold text-lg sm:text-xl">Browse Phones</p>
+                      </div>
+                      <p className="text-sm sm:text-base text-gray-400">Find great deals and place your bids</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -560,25 +533,7 @@ const UserDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'wallet' && (
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8">Wallet</h1>
-                <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6 sm:p-8">
-                  <div className="text-center mb-6 sm:mb-8">
-                    <p className="text-gray-400 mb-2 text-sm sm:text-base">Current Balance</p>
-                    <p className="text-4xl sm:text-6xl font-bold text-[#c4ff0d]">₹{stats.wallet}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <button className="bg-[#c4ff0d] text-black py-3 sm:py-4 rounded-lg font-semibold hover:bg-[#d4ff3d] transition text-sm sm:text-base">
-                      Add Funds
-                    </button>
-                    <button className="bg-[#1a1a1a] border border-[#2a2a2a] text-white py-3 sm:py-4 rounded-lg font-semibold hover:border-[#c4ff0d] transition text-sm sm:text-base">
-                      Withdraw
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>

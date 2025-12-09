@@ -8,37 +8,37 @@ const HowItWorks = () => {
       icon: UserPlus,
       title: 'Create Account',
       description: 'Sign up with your email and verify your identity. Your real identity stays private - you get an anonymous ID for all transactions.',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-[#c4ff0d] to-[#b8e60d]'
     },
     {
       icon: Search,
       title: 'Browse or List',
       description: 'Browse available phones in the marketplace or list your own device for auction. Set your minimum bid price and auction duration.',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-[#c4ff0d] to-[#a8d60d]'
     },
     {
       icon: Gavel,
       title: 'Place Bids',
       description: 'Place anonymous bids on phones you want. Your identity is protected - sellers only see your anonymous bidder ID.',
-      color: 'from-green-500 to-green-600'
+      color: 'from-[#c4ff0d] to-[#d4ff3d]'
     },
     {
       icon: Shield,
       title: 'Secure Escrow',
       description: 'When you win, funds are held in secure escrow. This protects both buyers and sellers during the transaction.',
-      color: 'from-orange-500 to-orange-600'
+      color: 'from-[#b8e60d] to-[#c4ff0d]'
     },
     {
       icon: CheckCircle,
       title: 'Verification Meeting',
       description: 'Meet at a safe location to verify the phone. Admin coordinates the meeting and ensures everything is as described.',
-      color: 'from-pink-500 to-pink-600'
+      color: 'from-[#a8d60d] to-[#c4ff0d]'
     },
     {
       icon: Truck,
       title: 'Complete Transaction',
       description: 'Once verified, funds are released to the seller and you get your phone. Both parties can leave anonymous reviews.',
-      color: 'from-cyan-500 to-cyan-600'
+      color: 'from-[#d4ff3d] to-[#c4ff0d]'
     }
   ];
 
@@ -62,7 +62,7 @@ const HowItWorks = () => {
             <div key={index} className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6 md:p-8 hover:border-[#c4ff0d]/50 transition">
               <div className="flex flex-col md:flex-row items-start gap-6">
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center flex-shrink-0`}>
-                  <step.icon className="w-8 h-8 text-white" />
+                  <step.icon className="w-8 h-8 text-black" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
