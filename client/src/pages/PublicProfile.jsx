@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { userAPI, reelAPI } from '../services/api';
 import { ArrowLeft, MoreHorizontal, Gavel, Trophy, Play, CheckCircle, Smartphone, RefreshCw, Image as ImageIcon } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const PublicProfile = () => {
   const { anonymousId } = useParams();
@@ -366,7 +366,7 @@ const PublicProfile = () => {
           )}
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

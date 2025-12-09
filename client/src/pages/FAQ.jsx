@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
@@ -160,7 +160,7 @@ const FAQ = () => {
           </Link>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

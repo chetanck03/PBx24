@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, UserX, Database, Trash2 } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const Privacy = () => {
   const privacyFeatures = [
@@ -96,7 +96,7 @@ const Privacy = () => {
           </ul>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

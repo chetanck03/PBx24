@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { phoneAPI, auctionAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import Footer from '../components/common/Footer';
+
 
 const EnhancedMarketplace = () => {
   const [phones, setPhones] = useState([]);
@@ -633,7 +633,7 @@ const EnhancedMarketplace = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

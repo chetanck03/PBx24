@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Search, Gavel, Shield, CheckCircle, Truck } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const HowItWorks = () => {
   const steps = [
@@ -93,7 +93,7 @@ const HowItWorks = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

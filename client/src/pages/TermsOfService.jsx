@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const TermsOfService = () => {
   return (
@@ -118,7 +118,7 @@ const TermsOfService = () => {
           </section>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

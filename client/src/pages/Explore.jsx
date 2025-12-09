@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { reelAPI, userAPI } from '../services/api';
 import { Search, Play, User, X, Loader2, Image as ImageIcon } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const Explore = () => {
   const navigate = useNavigate();
@@ -308,7 +308,7 @@ const Explore = () => {
           </>
         )}
       </div>
-      <Footer />
+
     </div>
   );
 };

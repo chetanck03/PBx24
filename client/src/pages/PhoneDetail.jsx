@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { phoneAPI, auctionAPI, bidAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import Footer from '../components/common/Footer';
+
 import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, Trophy, LogIn, Gavel, AlertTriangle } from 'lucide-react';
 
 const PhoneDetail = () => {
@@ -693,7 +693,7 @@ const PhoneDetail = () => {
         </div>
       )}
 
-      <Footer />
+
     </div>
   );
 };

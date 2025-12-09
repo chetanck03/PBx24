@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, MessageCircle, Mail, Phone, FileText, Shield, CreditCard, Users } from 'lucide-react';
-import Footer from '../components/common/Footer';
+
 
 const HelpCenter = () => {
   const categories = [
@@ -113,7 +113,7 @@ const HelpCenter = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };

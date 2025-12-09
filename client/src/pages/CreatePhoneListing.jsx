@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
-import Footer from '../components/common/Footer';
+
 import toast from 'react-hot-toast';
 import Logo from '../components/common/Logo';
 
 const CreatePhoneListing = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
+
   const [formData, setFormData] = useState({
     brand: '',
     model: '',
@@ -246,15 +246,15 @@ const CreatePhoneListing = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-            {/* Column 1: Device Details */}
+          <div className="space-y-6">
+            {/* Section 1: Device Details */}
             <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-xl lg:rounded-2xl p-4 lg:p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="text-2xl font-bold text-white">1.</span>
                 <h2 className="text-xl font-bold text-white">Device Details</h2>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="text-gray-400 text-sm mb-2 block">Brand</label>
                   <select
@@ -347,17 +347,17 @@ const CreatePhoneListing = () => {
                     required
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 text-gray-500 text-xs pt-2">
-                  <svg className="w-4 h-4 text-[#c4ff0d]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                  </svg>
-                  <span>(Encrypted, Only visible to admins)</span>
-                </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs pt-2">
+                <svg className="w-4 h-4 text-[#c4ff0d]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <span>(Encrypted, Only visible to admins)</span>
               </div>
             </div>
 
-            {/* Column 2: Condition & Auction */}
+            {/* Section 2: Condition & Auction */}
             <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="text-2xl font-bold text-white">2.</span>
@@ -386,63 +386,83 @@ const CreatePhoneListing = () => {
                   </div>
                 </div>
 
-                {/* Minimum Bid Price */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">Minimum Bid Price (₹)</label>
-                  <input
-                    type="number"
-                    name="minBidPrice"
-                    value={formData.minBidPrice}
-                    onChange={handleChange}
-                    placeholder="Enter minimum bid"
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
-                    required
-                  />
+                {/* Row 1: Minimum Bid Price and Auction Duration */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-2 block">Minimum Bid Price (₹)</label>
+                    <input
+                      type="number"
+                      name="minBidPrice"
+                      value={formData.minBidPrice}
+                      onChange={handleChange}
+                      placeholder="Enter minimum bid"
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-white font-semibold mb-2 block">Auction Duration</label>
+                    <select
+                      name="auctionDuration"
+                      value={formData.auctionDuration}
+                      onChange={handleChange}
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                      required
+                    >
+                      <option value="1">1 Day</option>
+                      <option value="3">3 Days</option>
+                      <option value="7">7 Days</option>
+                      <option value="14">14 Days</option>
+                      <option value="30">30 Days</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Device Location - State */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">State</label>
-                  <select
-                    name="state"
-                    value={formData.state}
-                    onChange={(e) => {
-                      const state = e.target.value;
-                      setFormData(prev => ({
-                        ...prev,
-                        state: state,
-                        location: prev.city ? `${prev.city}, ${state}` : state
-                      }));
-                    }}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
-                    required
-                  >
-                    <option value="">Select State</option>
-                    {indianStates.map(state => (
-                      <option key={state} value={state}>{state}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Row 2: State and City */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-2 block">State</label>
+                    <select
+                      name="state"
+                      value={formData.state}
+                      onChange={(e) => {
+                        const state = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          state: state,
+                          location: prev.city ? `${prev.city}, ${state}` : state
+                        }));
+                      }}
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
+                      required
+                    >
+                      <option value="">Select State</option>
+                      {indianStates.map(state => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Device Location - City */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-2 block">City</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={(e) => {
-                      const city = e.target.value;
-                      setFormData(prev => ({
-                        ...prev,
-                        city: city,
-                        location: city && prev.state ? `${city}, ${prev.state}` : (prev.state || city)
-                      }));
-                    }}
-                    placeholder="e.g., Ludhiana, Mumbai"
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
-                    required
-                  />
+                  <div>
+                    <label className="text-gray-400 text-sm mb-2 block">City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={(e) => {
+                        const city = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          city: city,
+                          location: city && prev.state ? `${city}, ${prev.state}` : (prev.state || city)
+                        }));
+                      }}
+                      placeholder="e.g., Ludhiana, Mumbai"
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* Included Accessories */}
@@ -485,29 +505,10 @@ const CreatePhoneListing = () => {
                     ))}
                   </div>
                 </div>
-
-                {/* Auction Duration */}
-                <div>
-                  <label className="text-white font-semibold mb-3 block">Auction Duration</label>
-                  <select
-                    name="auctionDuration"
-                    value={formData.auctionDuration}
-                    onChange={handleChange}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none"
-                    required
-                  >
-                    <option value="1">1 Day</option>
-                    <option value="3">3 Days</option>
-                    <option value="7">7 Days</option>
-                    <option value="14">14 Days</option>
-                    <option value="30">30 Days</option>
-                  </select>
-                  <p className="text-gray-500 text-xs mt-2">Select auction duration</p>
-                </div>
               </div>
             </div>
 
-            {/* Column 3: Upload & Describe */}
+            {/* Section 3: Upload & Describe */}
             <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="text-2xl font-bold text-white">3.</span>
@@ -596,7 +597,7 @@ const CreatePhoneListing = () => {
             <button
               type="submit"
               disabled={submitting || uploadedCount < 2}
-              className="bg-[#c4ff0d] text-black px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#d4ff3d] transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="bg-[#ffeb3b] text-black w-48 h-14 rounded-full font-bold text-lg hover:bg-[#fff176] transition disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
             >
               {submitting ? 'Creating Listing...' : 'Create Listing'}
             </button>
@@ -604,14 +605,14 @@ const CreatePhoneListing = () => {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#2a2a2a] transition"
+              className="bg-[#1a1a1a] border border-[#2a2a2a] text-white w-32 h-14 rounded-full font-bold text-lg hover:bg-[#2a2a2a] transition shadow-lg"
             >
               Cancel
             </button>
           </div>
         </form>
       </div>
-      <Footer />
+
     </div>
   );
 };

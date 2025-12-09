@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Footer from '../components/common/Footer';
+
 import toast from 'react-hot-toast';
 import { 
   MessageSquare, Send, X, FileText, Mail, Tag, 
@@ -409,7 +409,7 @@ const Complaints = () => {
           </div>
         )}
       </div>
-      <Footer />
+
     </div>
   );
 };

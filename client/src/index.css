@@ -142,41 +142,30 @@ de scrollbar for reels feed */
   aspect-ratio: 9 / 16;
 }
 
-/* Global Custom Scrollbar Styles - Applied to entire application */
+/* Global Scrollbar Hide - Applied to entire application */
 * {
-  /* Firefox scrollbar styling */
-  scrollbar-width: thin;
-  scrollbar-color: #c4ff0d #1a1a1a;
+  /* Firefox scrollbar hiding */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* WebKit browsers (Chrome, Safari, Edge) - Global scrollbar */
+/* WebKit browsers (Chrome, Safari, Edge) - Hide scrollbar completely */
 *::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 *::-webkit-scrollbar-track {
-  background: #0a0a0a;
-  border-radius: 10px;
+  display: none;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #c4ff0d 0%, #d4ff3d 50%, #e4ff6d 100%);
-  border-radius: 10px;
-  box-shadow: 0 0 6px rgba(196, 255, 13, 0.3);
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #d4ff3d 0%, #e4ff6d 50%, #f4ff9d 100%);
-  box-shadow: 0 0 8px rgba(196, 255, 13, 0.5);
-}
-
-*::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(135deg, #b4ef00 0%, #c4ff0d 50%, #d4ff3d 100%);
+  display: none;
 }
 
 *::-webkit-scrollbar-corner {
-  background: #0a0a0a;
+  display: none;
 }
 
 /* Custom scrollbar styles for specific elements */
@@ -251,37 +240,28 @@ de scrollbar for reels feed */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Enhanced scrollbar for modals and dropdowns */
+/* Hide scrollbar for modals and dropdowns */
 .modal-scrollbar::-webkit-scrollbar {
-  width: 3px;
+  display: none;
+  width: 0;
 }
 
-.modal-scrollbar::-webkit-scrollbar-track {
-  background: rgba(26, 26, 26, 0.5);
-  border-radius: 10px;
+.modal-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.modal-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #c4ff0d 0%, #d4ff3d 100%);
-  border-radius: 10px;
-  box-shadow: 0 0 4px rgba(196, 255, 13, 0.4);
-}
-
-.modal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #d4ff3d 0%, #e4ff6d 100%);
-  box-shadow: 0 0 6px rgba(196, 255, 13, 0.6);
-}
-
-/* Ultra-thin scrollbar for mobile */
+/* Hide scrollbar on mobile devices */
 @media screen and (max-width: 768px) {
   *::-webkit-scrollbar {
-    width: 2px;
-    height: 2px;
+    display: none;
+    width: 0;
+    height: 0;
   }
   
-  *::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #c4ff0d 0%, #d4ff3d 100%);
-    border-radius: 5px;
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 }
 

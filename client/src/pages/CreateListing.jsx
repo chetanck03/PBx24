@@ -307,7 +307,7 @@ const CreateListing = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-end space-x-4 mb-16">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
@@ -318,7 +318,7 @@ const CreateListing = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                className="px-6 py-2 bg-[#c4ff0d] text-black rounded-md hover:bg-[#d4ff3d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-semibold shadow-lg shadow-[#c4ff0d]/30"
               >
                 {loading ? (
                   <>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { userAPI, phoneAPI, bidAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import Footer from '../components/common/Footer';
+
 
 const UserDashboard = () => {
   const [user, setUser] = useState(null);
@@ -264,7 +264,7 @@ const UserDashboard = () => {
 
                   <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="bg-[#c4ff0d] text-black text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">LIVE</span>
@@ -275,7 +275,7 @@ const UserDashboard = () => {
 
                   <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -285,7 +285,7 @@ const UserDashboard = () => {
 
                   <div className="bg-[#0f0f0f] border-2 border-[#2a2a2a] rounded-xl p-4 sm:p-6 hover:border-[#c4ff0d] transition">
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                       </svg>
                     </div>
@@ -582,7 +582,7 @@ const UserDashboard = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };
