@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI, reelAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -13,10 +14,11 @@ import {
 } from 'recharts';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [phones, setPhones] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+
   const [complaints, setComplaints] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -45,12 +47,11 @@ const AdminDashboard = () => {
       const results = await Promise.allSettled([
         adminAPI.getPlatformStatistics(),
         adminAPI.getAllUsers({ limit: 100 }),
-        adminAPI.getAllPhones({ limit: 100 }),
-        adminAPI.getAllTransactions({ limit: 100 })
+        adminAPI.getAllPhones({ limit: 100 })
       ]);
 
       // Extract data from successful requests, use fallback for failed ones
-      const [statsResult, usersResult, phonesResult, transactionsResult] = results;
+      const [statsResult, usersResult, phonesResult] = results;
 
       // Default stats structure for fallback
       const defaultStats = {
@@ -81,11 +82,7 @@ const AdminDashboard = () => {
         console.error('Phones fetch failed:', phonesResult.reason);
       }
 
-      if (transactionsResult.status === 'fulfilled') {
-        setTransactions(transactionsResult.value.data.data || []);
-      } else {
-        console.error('Transactions fetch failed:', transactionsResult.reason);
-      }
+
 
       setLastUpdated(new Date());
 
@@ -264,7 +261,6 @@ const AdminDashboard = () => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'phones', label: 'Phones', icon: Smartphone },
     { id: 'sold-phones', label: 'Sold Phones', icon: CheckCircle },
-    { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'complaints', label: 'Complaints', icon: MessageSquare },
   ], []);
 
@@ -370,11 +366,10 @@ const AdminDashboard = () => {
           </div>
         </header>
         <div className="p-4 lg:p-6">
-          {activeTab === 'overview' && <OverviewTab stats={stats} users={users} phones={phones} transactions={transactions} autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} lastUpdated={lastUpdated} />}
+          {activeTab === 'overview' && <OverviewTab stats={stats} users={users} phones={phones} autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} lastUpdated={lastUpdated} />}
           {activeTab === 'users' && <UsersTab users={users} onView={handleViewUser} onKYC={handleReviewKYC} onDelete={handleDeleteUser} onUpdateRole={handleUpdateRole} StatusBadge={StatusBadge} />}
           {activeTab === 'phones' && <PhonesTab phones={phones} onVerify={handleVerifyPhone} onDelete={handleDeletePhone} onRefresh={loadDashboardData} StatusBadge={StatusBadge} />}
           {activeTab === 'sold-phones' && <SoldPhonesTab soldPhones={soldPhones} onViewUser={handleViewUser} StatusBadge={StatusBadge} />}
-          {activeTab === 'transactions' && <TransactionsTab transactions={transactions} StatusBadge={StatusBadge} />}
           {activeTab === 'complaints' && <ComplaintsTab complaints={complaints} onUpdate={handleUpdateComplaint} StatusBadge={StatusBadge} />}
           {activeTab === 'user-detail' && <UserDetailTab user={selectedUser} phones={userPhones} bids={userBids} reels={userReels} onBack={() => setActiveTab('users')} onDeleteReel={handleDeleteReel} onDeleteUser={handleDeleteUser} />}
         </div>
@@ -490,7 +485,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 // Overview Tab - Enhanced with Visual Analytics
-const OverviewTab = ({ stats, users, phones, transactions, autoRefresh, setAutoRefresh, lastUpdated }) => {
+const OverviewTab = ({ stats, users, phones, autoRefresh, setAutoRefresh, lastUpdated }) => {
   const CHART_COLORS = ['#c4ff0d', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
 
   // Use safe defaults if stats is null/undefined
@@ -510,12 +505,10 @@ const OverviewTab = ({ stats, users, phones, transactions, autoRefresh, setAutoR
       const isToday = index === today;
       const baseUsers = Math.floor((users?.length || 0) / 7);
       const basePhones = Math.floor((phones?.length || 0) / 7);
-      const baseTx = Math.floor((transactions?.length || 0) / 7);
       return {
         name: day,
         users: isToday ? (users?.length || 0) : Math.max(1, baseUsers + Math.floor(Math.random() * 3)),
         phones: isToday ? (phones?.length || 0) : Math.max(0, basePhones + Math.floor(Math.random() * 2)),
-        transactions: isToday ? (transactions?.length || 0) : Math.max(0, baseTx + Math.floor(Math.random() * 2)),
       };
     });
   };
@@ -848,6 +841,7 @@ const UsersTab = ({ users, onView, onKYC, onDelete, onUpdateRole, StatusBadge })
 
 // Phones Tab - Responsive (excludes sold phones)
 const PhonesTab = ({ phones, onVerify, onDelete, onRefresh, StatusBadge }) => {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   
@@ -928,6 +922,7 @@ const PhonesTab = ({ phones, onVerify, onDelete, onRefresh, StatusBadge }) => {
           <div className="flex items-center justify-between">
             <StatusBadge status={phone.verificationStatus} />
             <div className="flex gap-2">
+              <button onClick={() => navigate(`/phone/${phone._id}`)} className="p-2 bg-blue-500/20 rounded-lg" title="View Phone Details"><Eye className="w-4 h-4 text-blue-400" /></button>
               {phone.verificationStatus === 'pending' && (
                 <>
                   <button onClick={() => onVerify(phone._id, 'approved')} className="p-2 bg-green-500/20 rounded-lg"><Check className="w-4 h-4 text-green-400" /></button>
@@ -967,6 +962,7 @@ const PhonesTab = ({ phones, onVerify, onDelete, onRefresh, StatusBadge }) => {
                 <td className="px-6 py-4"><StatusBadge status={phone.verificationStatus} /></td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
+                    <button onClick={() => navigate(`/phone/${phone._id}`)} className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg" title="View Phone Details"><Eye className="w-4 h-4 text-blue-400" /></button>
                     {phone.verificationStatus === 'pending' && (
                       <>
                         <button onClick={() => onVerify(phone._id, 'approved')} className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg"><Check className="w-4 h-4 text-green-400" /></button>
@@ -986,61 +982,7 @@ const PhonesTab = ({ phones, onVerify, onDelete, onRefresh, StatusBadge }) => {
 );
 };
 
-// Transactions Tab - Responsive
-const TransactionsTab = ({ transactions, StatusBadge }) => (
-  <div className="space-y-4">
-    {/* Mobile Cards */}
-    <div className="lg:hidden space-y-3">
-      {transactions.map((tx) => (
-        <div key={tx._id} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="text-gray-400 text-xs font-mono">#{tx._id?.slice(-8)}</p>
-              <p className="text-white font-bold text-lg">₹{tx.finalAmount?.toLocaleString()}</p>
-            </div>
-            <div className="flex flex-col gap-1 items-end">
-              <StatusBadge status={tx.escrowStatus} />
-              <StatusBadge status={tx.meetingStatus} />
-            </div>
-          </div>
-          <div className="text-xs text-gray-500">
-            <p>Seller: {tx.sellerId?.slice(0, 12)}...</p>
-            <p>Buyer: {tx.buyerId?.slice(0, 12)}...</p>
-          </div>
-        </div>
-      ))}
-    </div>
-    {/* Desktop Table */}
-    <div className="hidden lg:block bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#1a1a1a]">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">ID</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Seller</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Buyer</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Amount</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Escrow</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase">Meeting</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#1a1a1a]">
-            {transactions.map((tx) => (
-              <tr key={tx._id} className="hover:bg-[#1a1a1a]/50">
-                <td className="px-6 py-4 text-gray-400 font-mono text-sm">{tx._id?.slice(-8)}</td>
-                <td className="px-6 py-4 text-gray-400 text-sm">{tx.sellerId?.slice(0, 12)}...</td>
-                <td className="px-6 py-4 text-gray-400 text-sm">{tx.buyerId?.slice(0, 12)}...</td>
-                <td className="px-6 py-4 text-white font-medium">₹{tx.finalAmount?.toLocaleString()}</td>
-                <td className="px-6 py-4"><StatusBadge status={tx.escrowStatus} /></td>
-                <td className="px-6 py-4"><StatusBadge status={tx.meetingStatus} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-);
+
 
 
 // Complaints Tab - Responsive
@@ -1074,6 +1016,7 @@ const ComplaintsTab = ({ complaints, onUpdate, StatusBadge }) => (
 
 // User Detail Tab - Responsive
 const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDeleteUser }) => {
+  const navigate = useNavigate();
   if (!user) return null;
   // Use totalReelViews from user object (fetched from stats API) or calculate from reels
   const totalViews = user.totalReelViews || reels.reduce((sum, reel) => sum + (reel.views || 0), 0);
@@ -1169,7 +1112,7 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
               <div 
                 key={phone._id} 
                 className="bg-[#1a1a1a] rounded-xl p-3 lg:p-4 flex gap-3 cursor-pointer hover:bg-[#252525] hover:border-[#c4ff0d] border border-transparent transition-all"
-                onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+                onClick={() => navigate(`/phone/${phone._id}`)}
               >
                 {phone.images?.[0] && <img src={phone.images[0]} alt="" className="w-16 h-16 lg:w-20 lg:h-20 rounded-lg object-cover flex-shrink-0" />}
                 <div className="min-w-0 flex-1">
@@ -1223,7 +1166,9 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
 };
 
 // Sold Phones Tab - Shows all sold phones with buyer/seller details
-const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => (
+const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => {
+  const navigate = useNavigate();
+  return (
   <div className="space-y-4">
     {soldPhones.length === 0 ? (
       <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl lg:rounded-2xl p-8 lg:p-12 text-center">
@@ -1267,7 +1212,7 @@ const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => (
                 )}
                 <div className="flex-1 min-w-0">
                   <button 
-                    onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+                    onClick={() => navigate(`/phone/${phone._id}`)}
                     className="text-white font-medium truncate hover:text-[#c4ff0d] flex items-center gap-1"
                   >
                     {phone.brand} {phone.model}
@@ -1351,7 +1296,7 @@ const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => (
                         )}
                         <div>
                           <button 
-                            onClick={() => window.open(`/phone/${phone._id}`, '_blank')}
+                            onClick={() => navigate(`/phone/${phone._id}`)}
                             className="text-white font-medium hover:text-[#c4ff0d] flex items-center gap-1"
                           >
                             {phone.brand} {phone.model}
@@ -1429,7 +1374,8 @@ const SoldPhonesTab = ({ soldPhones, onViewUser, StatusBadge }) => (
       </>
     )}
   </div>
-);
+  );
+};
 
 
 
