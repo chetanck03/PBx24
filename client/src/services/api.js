@@ -145,6 +145,7 @@ export const adminAPI = {
   getAllUsers: (params) => api.get('/admin/users', { params }),
   getUserById: (id) => api.get(`/admin/users/${id}`),
   reviewKYC: (userId, kycStatus, notes) => api.put(`/admin/users/${userId}/kyc`, { kycStatus, notes }),
+  updateUserRole: (userId, data) => api.put(`/admin/users/${userId}/role`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getAllPhones: (params) => api.get('/admin/phones', { params }),
   getPhoneById: (id) => api.get(`/admin/phones/${id}`),

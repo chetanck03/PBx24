@@ -155,6 +155,67 @@ export const reviewKYC = async (req, res) => {
 };
 
 /**
+ * Update user role
+ */
+export const updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+    
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid role. Must be either "user" or "admin"',
+          code: 'INVALID_ROLE'
+        }
+      });
+    }
+    
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Prevent self-demotion from admin
+    if (req.user._id.toString() === userId && user.role === 'admin' && role === 'user') {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Cannot demote yourself from admin role',
+          code: 'SELF_DEMOTION_FORBIDDEN'
+        }
+      });
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    res.json({
+      success: true,
+      data: user.toFullObject(),
+      message: `User role updated to ${role} successfully`
+    });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Error updating user role',
+        code: 'ROLE_UPDATE_ERROR'
+      }
+    });
+  }
+};
+
+/**
  * Get all phones with full data including IMEI
  */
 export const getAllPhones = async (req, res) => {

@@ -26,7 +26,6 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const CreateListing = lazy(() => import('./pages/CreateListing'));
 const CreatePhoneListing = lazy(() => import('./pages/CreatePhoneListing'));
 const ListingDetail = lazy(() => import('./pages/ListingDetail'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
@@ -641,14 +640,6 @@ function AppContent() {
                 element={
                   <ProtectedRoute adminOnly>
                     <AdminDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin-old" 
-                element={
-                  <ProtectedRoute adminOnly>
-                    <AdminPanel />
                   </ProtectedRoute>
                 } 
               />

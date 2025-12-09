@@ -3,6 +3,7 @@ import {
   getAllUsers,
   getUserById,
   reviewKYC,
+  updateUserRole,
   getAllPhones,
   getPhoneById,
   getAllTransactions,
@@ -24,6 +25,7 @@ router.use(requireAuth, requireAdmin);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById);
 router.put('/users/:userId/kyc', reviewKYC);
+router.put('/users/:userId/role', updateUserRole);
 router.delete('/users/:id', async (req, res, next) => {
   try {
     const { deleteUser } = await import('../controllers/adminController.js');
