@@ -647,7 +647,61 @@ function AppContent() {
             </Suspense>
           </main>
 
-          <Toaster position="top-right" />
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              // Default options for all toasts
+              duration: 4000,
+              style: {
+                background: '#1a1a1a',
+                color: '#ffffff',
+                border: '1px solid #2a2a2a',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+              },
+              // Success toast styling
+              success: {
+                style: {
+                  background: '#1a1a1a',
+                  color: '#ffffff',
+                  border: '1px solid #c4ff0d',
+                  boxShadow: '0 10px 25px rgba(196, 255, 13, 0.2)',
+                },
+                iconTheme: {
+                  primary: '#c4ff0d',
+                  secondary: '#1a1a1a',
+                },
+              },
+              // Error toast styling
+              error: {
+                style: {
+                  background: '#1a1a1a',
+                  color: '#ffffff',
+                  border: '1px solid #ef4444',
+                  boxShadow: '0 10px 25px rgba(239, 68, 68, 0.2)',
+                },
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#1a1a1a',
+                },
+              },
+              // Loading toast styling
+              loading: {
+                style: {
+                  background: '#1a1a1a',
+                  color: '#ffffff',
+                  border: '1px solid #6b7280',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                },
+                iconTheme: {
+                  primary: '#c4ff0d',
+                  secondary: '#1a1a1a',
+                },
+              },
+            }}
+          />
           {/* Hide chatbot on reels page */}
           {location.pathname !== '/reels' && (
             <Suspense fallback={null}>

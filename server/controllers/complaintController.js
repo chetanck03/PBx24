@@ -7,6 +7,7 @@ import User from '../models/User.js';
 export const createComplaint = async (req, res) => {
   try {
     const { subject, description, userEmail, proof, category, priority, relatedPhone, relatedAuction, relatedTransaction } = req.body;
+
     
     if (!subject || !description || !category || !userEmail) {
       return res.status(400).json({
@@ -32,6 +33,7 @@ export const createComplaint = async (req, res) => {
     });
     
     await complaint.save();
+    console.log('Complaint saved successfully:', complaint._id);
     
     res.status(201).json({
       success: true,
@@ -56,10 +58,30 @@ export const createComplaint = async (req, res) => {
  */
 export const getUserComplaints = async (req, res) => {
   try {
+    console.log('Getting complaints for user:', req.userId);
+    
+    // First, let's check ALL complaints in the database for this user
+    const allComplaints = await Complaint.find({ userId: req.userId });
+    console.log('Raw complaints from DB:', allComplaints.length);
+    
+    // Check specifically for pending complaints
+    const pendingComplaints = await Complaint.find({ userId: req.userId, status: 'pending' });
+    console.log('Pending complaints found:', pendingComplaints.length);
+    
     const complaints = await Complaint.find({ userId: req.userId })
       .sort({ createdAt: -1 })
       .populate('relatedPhone', 'brand model')
       .populate('resolvedBy', 'name email');
+    
+    console.log('Found complaints after populate:', complaints.length);
+    console.log('Complaints data:', complaints.map(c => ({ id: c._id, subject: c.subject, status: c.status, createdAt: c.createdAt })));
+    
+    // Check status distribution
+    const statusCounts = complaints.reduce((acc, c) => {
+      acc[c.status] = (acc[c.status] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('Status distribution:', statusCounts);
     
     res.json({
       success: true,

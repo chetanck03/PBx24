@@ -40,7 +40,10 @@ const Complaints = () => {
       });
       
       console.log('Complaints response:', response.data);
+      console.log('Number of complaints received:', response.data.data?.length || 0);
+      console.log('Complaints data details:', response.data.data?.map(c => ({ id: c._id, subject: c.subject, status: c.status })));
       setComplaints(response.data.data || []);
+      console.log('Complaints state after setting:', response.data.data || []);
     } catch (error) {
       console.error('Error loading complaints:', error);
       console.error('Error details:', error.response?.data);
@@ -152,6 +155,7 @@ const Complaints = () => {
           <p className="text-gray-400 mb-6">Submit and track your complaints</p>
 
           {/* Complaints List */}
+          {console.log('Rendering complaints, length:', complaints.length, 'data:', complaints)}
           {complaints.length === 0 ? (
             <div className="bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl p-12 text-center">
               <div className="w-20 h-20 bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-4">
