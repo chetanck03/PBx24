@@ -108,3 +108,48 @@ de scrollbar for reels feed */
 .scrollbar-thumb-rounded-full::-webkit-scrollbar-thumb {
   border-radius: 9999px;
 }
+/* Chatbot responsive improvements */
+/* Improve touch targets on mobile */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better scrolling on mobile */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent zoom on input focus on iOS */
+@media screen and (max-width: 640px) {
+  input[type="text"] {
+    font-size: 16px !important;
+  }
+}
+/* Mobile chatbot input fix */
+@media screen and (max-width: 640px) {
+  /* Ensure chatbot input is always visible on mobile */
+  .chatbot-mobile-input {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+  
+  /* Handle mobile viewport height issues */
+  .chatbot-mobile-container {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for better mobile support */
+  }
+  
+  /* Prevent input zoom on iOS */
+  .chatbot-input {
+    font-size: 16px !important;
+    transform: translateZ(0); /* Force hardware acceleration */
+  }
+}
+
+/* Safe area padding for mobile devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}

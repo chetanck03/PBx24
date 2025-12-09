@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2, Maximize2, RefreshCw } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Bot, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 const Chatbot = () => {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -28,10 +28,33 @@ const Chatbot = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && !isMinimized) {
+    if (isOpen) {
       inputRef.current?.focus();
     }
-  }, [isOpen, isMinimized]);
+  }, [isOpen]);
+
+  // Handle ESC key to close fullscreen chatbot and hide body scroll
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      // Hide body scrollbar when chatbot is fullscreen
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleEscKey);
+      
+      return () => {
+        document.body.style.overflow = 'unset';
+        document.removeEventListener('keydown', handleEscKey);
+      };
+    } else {
+      // Restore body scrollbar when chatbot is closed
+      document.body.style.overflow = 'unset';
+    }
+  }, [isOpen]);
 
   const sendMessage = async (e) => {
     e?.preventDefault();
@@ -128,26 +151,22 @@ const Chatbot = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#c4ff0d] hover:bg-[#d4ff3d] rounded-full shadow-lg shadow-[#c4ff0d]/30 flex items-center justify-center transition-all hover:scale-110 group"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-[#c4ff0d] hover:bg-[#d4ff3d] rounded-full shadow-lg shadow-[#c4ff0d]/30 flex items-center justify-center transition-all hover:scale-110 group"
         >
-          <MessageCircle className="w-6 h-6 text-black" />
-          <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
+          <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
+          <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
             AI
           </span>
         </button>
       )}
 
+      {/* Backdrop - removed since we're going fullscreen */}
+
       {/* Chat Window */}
       {isOpen && (
-        <div 
-          className={`fixed z-50 bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl shadow-2xl transition-all duration-300 ${
-            isMinimized 
-              ? 'bottom-6 right-6 w-72 h-14' 
-              : 'bottom-6 right-6 w-96 h-[600px] max-h-[80vh]'
-          }`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a] bg-[#1a1a1a] rounded-t-2xl">
+        <div className="fixed z-50 bg-[#0f0f0f] border border-[#2a2a2a] shadow-2xl transition-all duration-300 inset-0 rounded-none flex flex-col chatbot-mobile-container">
+          {/* Header - Fixed */}
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-[#2a2a2a] bg-[#1a1a1a] flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#c4ff0d] rounded-full flex items-center justify-center">
                 <Bot className="w-5 h-5 text-black" />
@@ -157,42 +176,30 @@ const Chatbot = () => {
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-gray-400">Online</span>
+                  <span className="text-xs text-gray-500">• Press ESC or click X to close</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={resetChat}
-                className="p-2 hover:bg-[#2a2a2a] rounded-lg transition"
+                className="p-2 sm:p-2 hover:bg-[#2a2a2a] rounded-lg transition touch-manipulation"
                 title="Reset conversation"
               >
                 <RefreshCw className="w-4 h-4 text-gray-400" />
               </button>
               <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="p-2 hover:bg-[#2a2a2a] rounded-lg transition"
-                title={isMinimized ? "Maximize" : "Minimize"}
-              >
-                {isMinimized ? (
-                  <Maximize2 className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <Minimize2 className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-              <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-[#2a2a2a] rounded-lg transition"
+                className="p-2 sm:p-2 hover:bg-[#2a2a2a] rounded-lg transition touch-manipulation"
                 title="Close"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <X className="w-4 h-4 sm:w-4 sm:h-4 text-gray-400" />
               </button>
             </div>
           </div>
 
-          {!isMinimized && (
-            <>
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full p-4 space-y-4 h-[calc(100%-140px)]">
+          {/* Messages */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-3 sm:p-4 space-y-3 sm:space-y-4 mobile-scroll min-h-0">
                 {messages.map((msg, index) => (
                   <div
                     key={index}
@@ -207,15 +214,15 @@ const Chatbot = () => {
                         <Bot className="w-4 h-4 text-[#c4ff0d]" />
                       )}
                     </div>
-                    <div className={`max-w-[75%] ${msg.role === 'user' ? 'text-right' : ''}`}>
-                      <div className={`px-4 py-3 rounded-2xl ${
+                    <div className={`max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'text-right' : ''}`}>
+                      <div className={`px-3 py-2 sm:px-4 sm:py-3 rounded-2xl ${
                         msg.role === 'user' 
                           ? 'bg-[#c4ff0d] text-black rounded-tr-sm' 
                           : msg.isError 
                             ? 'bg-red-500/20 text-red-300 rounded-tl-sm'
                             : 'bg-[#1a1a1a] text-gray-200 rounded-tl-sm'
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
                       </div>
                       <span className="text-xs text-gray-500 mt-1 block">
                         {formatTime(msg.timestamp)}
@@ -229,7 +236,7 @@ const Chatbot = () => {
                     <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center">
                       <Bot className="w-4 h-4 text-[#c4ff0d]" />
                     </div>
-                    <div className="bg-[#1a1a1a] px-4 py-3 rounded-2xl rounded-tl-sm">
+                    <div className="bg-[#1a1a1a] px-3 py-2 sm:px-4 sm:py-3 rounded-2xl rounded-tl-sm">
                       <div className="flex gap-1">
                         <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                         <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -242,8 +249,9 @@ const Chatbot = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input - Always visible */}
-              <form onSubmit={sendMessage} className="p-4 border-t border-[#2a2a2a]">
+              {/* Input - Always visible - Fixed at bottom */}
+              <div className="flex-shrink-0 bg-[#0f0f0f] border-t border-[#2a2a2a] chatbot-mobile-input pb-safe">
+                <form onSubmit={sendMessage} className="p-3 sm:p-4">
                 <div className="flex gap-2">
                   <input
                     ref={inputRef}
@@ -254,12 +262,12 @@ const Chatbot = () => {
                     placeholder="Ask me anything..."
                     maxLength={1000}
                     disabled={loading}
-                    className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d] disabled:opacity-50"
+                    className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c4ff0d] disabled:opacity-50 chatbot-input"
                   />
                   <button
                     type="submit"
                     disabled={!input.trim() || loading}
-                    className="p-3 bg-[#c4ff0d] hover:bg-[#d4ff3d] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="p-2 sm:p-3 bg-[#c4ff0d] hover:bg-[#d4ff3d] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     {loading ? (
                       <Loader2 className="w-5 h-5 text-black animate-spin" />
@@ -270,15 +278,15 @@ const Chatbot = () => {
                 </div>
                 {/* Quick Questions - Below input */}
                 {messages.length <= 2 && (
-                  <div className="mt-3">
+                  <div className="mt-2 sm:mt-3">
                     <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                       {quickQuestions.map((q, i) => (
                         <button
                           key={i}
                           type="button"
                           onClick={() => handleQuickQuestion(q)}
-                          className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-full text-xs text-gray-300 transition"
+                          className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] border border-[#2a2a2a] rounded-full text-xs text-gray-300 transition touch-manipulation text-left sm:text-center"
                         >
                           {q}
                         </button>
@@ -286,9 +294,8 @@ const Chatbot = () => {
                     </div>
                   </div>
                 )}
-              </form>
-            </>
-          )}
+                </form>
+              </div>
         </div>
       )}
     </>
