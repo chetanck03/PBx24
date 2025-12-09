@@ -7,6 +7,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { reelAPI } from './services/api';
 import { X, Upload, Loader2 } from 'lucide-react';
+import Logo from './components/common/Logo';
 
 // Critical pages - load immediately
 import ProfessionalHome from './pages/ProfessionalHome';
@@ -182,15 +183,13 @@ function AppContent() {
               <div className="flex justify-between items-center">
                 {/* Logo */}
                 <div className="flex items-center">
-                  <h1 
+                  <div 
                     onClick={() => navigate(isAuthenticated ? '/marketplace' : '/')}
-                    className="text-xl font-bold text-white cursor-pointer flex items-center gap-2 hover:opacity-80 transition"
+                    className="cursor-pointer hover:opacity-80 transition"
                   >
-                    <div className="w-8 h-8 md:w-9 md:h-9 bg-[#c4ff0d] rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-[#c4ff0d]/30">
-                      <span className="text-black font-bold text-base md:text-lg">P</span>
-                    </div>
-                    <span className="hidden sm:inline">PhoneBid</span>
-                  </h1>
+                    <Logo showText={false} className="sm:hidden" />
+                    <Logo className="hidden sm:flex" />
+                  </div>
                 </div>
 
                 {/* Mobile Menu Button */}

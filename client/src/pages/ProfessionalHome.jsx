@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { phoneAPI, reelAPI } from '../services/api';
 import Footer from '../components/common/Footer';
 import { Play, Plus, Heart, Eye, Loader2 } from 'lucide-react';
+import Logo from '../components/common/Logo';
 
 const ProfessionalHome = () => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ const ProfessionalHome = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Hero Section */}
-      <section className="relative bg-[#0a0a0a] py-20 lg:py-32 overflow-hidden">
+      <section className="relative bg-[#0a0a0a] flex items-center py-10  overflow-hidden">
         {/* Grid Background Pattern */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0" style={{
@@ -72,23 +73,23 @@ const ProfessionalHome = () => {
         <div className="absolute top-0 left-0 w-96 h-96 bg-[#c4ff0d] opacity-10 blur-3xl rounded-full"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#c4ff0d] opacity-10 blur-3xl rounded-full"></div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  relative z-10 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12 items-center">
             {/* Left Content */}
-            <div>
-              <div className="inline-flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-4 py-2 mb-8">
+            <div  >
+              <div className="inline-flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-4 py-2 mb-6">
                 <div className="w-2 h-2 bg-[#c4ff0d] rounded-full"></div>
                 <span className="text-gray-400 text-sm">100% Anonymous & Secure</span>
               </div>
               
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              <h1 className="text-4xl sm:text-5xl md:text-5xl  font-bold text-white  leading-tight">
                 Buy & Sell Phones
                 <span className="block text-[#c4ff0d] mt-2">
                   Anonymously
                 </span>
               </h1>
               
-              <p className="text-lg text-gray-400 mb-8 leading-relaxed">
+              <p className="text-lg lg:text-xl text-gray-400 mb-6 leading-relaxed max-w-2xl">
                 The world's first anonymous phone marketplace. Bid on phones without revealing your identity. 
                 Complete privacy protection with secure escrow transactions.
               </p>
@@ -96,7 +97,7 @@ const ProfessionalHome = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => navigate('/marketplace')}
-                  className="bg-[#c4ff0d] text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105 flex items-center justify-center gap-2"
+                  className="bg-[#c4ff0d] text-black px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d4ff3d] transition transform hover:scale-105 flex items-center justify-center gap-2"
                 >
                   Browse Marketplace
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,35 +106,35 @@ const ProfessionalHome = () => {
                 </button>
                 <button
                   onClick={() => navigate('/auth/signup')}
-                  className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#2a2a2a] transition"
+                  className="bg-[#1a1a1a] border border-[#2a2a2a] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#2a2a2a] transition"
                 >
                   Start Selling
                 </button>
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 mt-12">
+              <div className="grid grid-cols-3 gap-4 lg:gap-6 mt-6 lg:mt-8">
                 <div>
-                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">10,000+</div>
-                  <div className="text-sm text-gray-500">Phones Listed</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1">10,000+</div>
+                  <div className="text-xs lg:text-sm text-gray-500">Phones Listed</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">50,000+</div>
-                  <div className="text-sm text-gray-500">Anonymous Users</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1">50,000+</div>
+                  <div className="text-xs lg:text-sm text-gray-500">Anonymous Users</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-[#c4ff0d] mb-1">₹2M+</div>
-                  <div className="text-sm text-gray-500">Transactions Completed</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1">₹2M+</div>
+                  <div className="text-xs lg:text-sm text-gray-500">Transactions Completed</div>
                 </div>
               </div>
             </div>
 
             {/* Right Content - Phone Device Mockup */}
-            <div className="relative hidden lg:flex justify-center items-center">
+            <div className="relative flex justify-center items-center order-second lg:order-last">
               {/* Large background glow - positioned behind everything */}
               <div 
-                className="absolute bg-[#c4ff0d] opacity-40 blur-[100px] rounded-full"
-                style={{ width: '500px', height: '500px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 0 }}
+                className="absolute bg-[#c4ff0d] opacity-30 lg:opacity-40 blur-[80px] lg:blur-[100px] rounded-full"
+                style={{ width: '400px', height: '400px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 0 }}
               ></div>
               
               <div className="relative perspective-1000 z-10">
@@ -143,36 +144,34 @@ const ProfessionalHome = () => {
                   <div className="relative transform-gpu transition-all duration-500 hover:scale-105 flex justify-center">
                     {/* Secondary glow closer to phone */}
                     <div 
-                      className="absolute bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-50 blur-[80px] rounded-full"
-                      style={{ width: '380px', height: '600px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: -1 }}
+                      className="absolute bg-gradient-to-br from-[#c4ff0d] to-[#a8e000] opacity-40 lg:opacity-50 blur-[60px] lg:blur-[80px] rounded-full"
+                      style={{ width: '300px', height: '0px', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: -1 }}
                     ></div>
                     
                     {/* Phone Outer Frame */}
-                    <div className="relative w-[340px] h-[680px] bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] rounded-[3rem] p-3 shadow-2xl border border-[#3a3a3a] z-10">
+                    <div className="relative w-[280px] sm:w-[320px] lg:w-[340px] xl:w-[380px] h-[450px] sm:h-[500px] lg:h-[530px] xl:h-[480px] bg-gradient-to-br from-[#2a2a2a] via-[#1f1f1f] to-[#1a1a1a] rounded-[2.5rem] lg:rounded-[3rem] p-2 lg:p-3 shadow-2xl border border-[#3a3a3a] z-10">
                       {/* Phone Screen */}
-                      <div className="w-full h-full bg-[#0a0a0a] rounded-[2.5rem] overflow-hidden relative">
+                      <div className="w-full h-full bg-[#0a0a0a] rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden relative">
                         {/* Status Bar */}
-                        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#0f0f0f] to-transparent z-10 flex items-center justify-between px-8">
-                          <span className="text-white text-xs">9:41</span>
+                        <div className="absolute top-0 left-0 right-0 h-10 lg:h-12 bg-gradient-to-b from-[#0f0f0f] to-transparent z-10 flex items-center justify-between px-4 lg:px-8">
+                          <span className="text-white text-xs lg:text-sm font-medium">9:41</span>
                           <div className="flex gap-1">
-                            <div className="w-4 h-4 bg-white rounded-full opacity-80"></div>
-                            <div className="w-4 h-4 bg-white rounded-full opacity-60"></div>
-                            <div className="w-4 h-4 bg-white rounded-full opacity-40"></div>
+                            <div className="w-3 h-3 lg:w-4 lg:h-4 bg-white rounded-full opacity-80"></div>
+                            <div className="w-3 h-3 lg:w-4 lg:h-4 bg-white rounded-full opacity-60"></div>
+                            <div className="w-3 h-3 lg:w-4 lg:h-4 bg-white rounded-full opacity-40"></div>
                           </div>
                         </div>
 
                         {/* Screen Content */}
-                        <div className="p-6 pt-16">
+                        <div className="p-3 lg:p-4 pt-10 lg:pt-12">
                           {/* App Header */}
-                          <div className="flex items-center gap-3 mb-8">
-                            <div className="w-12 h-12 bg-[#c4ff0d] rounded-xl flex items-center justify-center shadow-lg shadow-[#c4ff0d]/50">
-                              <span className="text-black font-bold text-xl">P</span>
-                            </div>
-                            <span className="text-white font-semibold text-lg">PhoneBid</span>
+                          <div className="mb-4 lg:mb-5">
+                            <Logo size="sm" className="lg:hidden" />
+                            <Logo size="md" className="hidden lg:flex" />
                           </div>
                           
                           {/* Bid Cards */}
-                          <div className="space-y-4">
+                          <div className="space-y-2 lg:space-y-3">
                             {[
                               { label: '₹20k', percent: '32%' },
                               { label: '₹25k', percent: '45%' },
@@ -180,33 +179,33 @@ const ProfessionalHome = () => {
                             ].map((item, idx) => (
                               <div 
                                 key={idx} 
-                                className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4"
+                                className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2 lg:p-3"
                                 style={{
                                   animation: `slideIn 0.5s ease-out ${idx * 0.15}s both`
                                 }}
                               >
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center">
-                                      <svg className="w-5 h-5 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 lg:w-8 lg:h-8 bg-[#1a1a1a] rounded-md flex items-center justify-center">
+                                      <svg className="w-3 h-3 lg:w-4 lg:h-4 text-[#c4ff0d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                       </svg>
                                     </div>
                                     <div>
-                                      <div className="text-white font-bold text-base">{item.label}</div>
+                                      <div className="text-white font-bold text-sm lg:text-base">{item.label}</div>
                                       <div className="text-gray-500 text-xs">Current Bid</div>
                                     </div>
                                   </div>
-                                  <div className="text-[#c4ff0d] font-bold text-lg">{item.percent}</div>
+                                  <div className="text-[#c4ff0d] font-bold text-sm lg:text-base">{item.percent}</div>
                                 </div>
                               </div>
                             ))}
                           </div>
 
                           {/* Anonymous ID Card */}
-                          <div className="mt-6 bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
-                            <div className="text-gray-500 text-xs mb-2">Anonymous ID</div>
-                            <div className="text-white font-mono text-base font-semibold">USER_7X9K...</div>
+                          <div className="mt-3 lg:mt-4 bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-2 lg:p-3">
+                            <div className="text-gray-500 text-xs mb-1">Anonymous ID</div>
+                            <div className="text-white font-mono text-sm lg:text-base font-semibold">USER_7X9K...</div>
                           </div>
                         </div>
 

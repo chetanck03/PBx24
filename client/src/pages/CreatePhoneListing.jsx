@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
 import Footer from '../components/common/Footer';
 import toast from 'react-hot-toast';
+import Logo from '../components/common/Logo';
 
 const CreatePhoneListing = () => {
   const navigate = useNavigate();
@@ -229,9 +230,7 @@ const CreatePhoneListing = () => {
         {/* Header */}
         <div className="mb-6 lg:mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#c4ff0d] rounded-xl flex items-center justify-center">
-              <span className="text-black font-bold text-lg lg:text-xl">P</span>
-            </div>
+            <Logo size="lg" showText={false} />
             <h1 className="text-2xl lg:text-3xl font-bold text-white">Create Listing</h1>
           </div>
           

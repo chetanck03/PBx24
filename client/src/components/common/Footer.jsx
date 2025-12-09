@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Logo from './Logo';
 
 const Footer = () => {
   return (
@@ -7,11 +8,8 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
           {/* Brand Section */}
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-[#c4ff0d] rounded-xl flex items-center justify-center">
-                <span className="text-black font-bold text-lg">P</span>
-              </div>
-              <h3 className="text-xl font-bold text-white">PhoneBid</h3>
+            <Link to="/" className="mb-4 inline-block">
+              <Logo size="lg" />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
               The world's first anonymous phone marketplace. Buy and sell phones with complete privacy and security.
