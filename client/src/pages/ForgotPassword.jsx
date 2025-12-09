@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Smartphone, KeyRound } from 'lucide-react';
+import config from '../config/env.js';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/forgot-password', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -92,7 +93,7 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/reset-password', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: otpString, newPassword })
@@ -131,7 +132,7 @@ const ForgotPassword = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/forgot-password', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

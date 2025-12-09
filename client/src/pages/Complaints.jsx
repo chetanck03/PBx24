@@ -6,8 +6,9 @@ import {
   MessageSquare, Send, X, FileText, Mail, Tag, 
   Paperclip, AlertTriangle, User
 } from 'lucide-react';
+import config from '../config/env.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = config.API_BASE_URL;
 
 const Complaints = () => {
   const [complaints, setComplaints] = useState([]);

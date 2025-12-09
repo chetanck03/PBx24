@@ -188,12 +188,12 @@ de scrollbar for reels feed */
   width: 6px;
 }
 
-.scrollbar-track-\[#1a1a1a\]::-webkit-scrollbar-track {
+.scrollbar-track-dark::-webkit-scrollbar-track {
   background: #1a1a1a;
   border-radius: 10px;
 }
 
-.scrollbar-thumb-\[#c4ff0d\]::-webkit-scrollbar-thumb {
+.scrollbar-thumb-green::-webkit-scrollbar-thumb {
   background: #c4ff0d;
   border-radius: 10px;
 }

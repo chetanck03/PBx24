@@ -574,7 +574,7 @@ const PhoneDetail = () => {
                   <p className="text-gray-500">No bids yet. Be the first to bid!</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin scrollbar-track-[#1a1a1a] scrollbar-thumb-[#c4ff0d] scrollbar-thumb-rounded-full pr-2">
+                <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin scrollbar-track-dark scrollbar-thumb-green scrollbar-thumb-rounded-full pr-2">
                   {bids.map((bid) => (
                     <div 
                       key={bid._id} 

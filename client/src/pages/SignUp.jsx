@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Eye, EyeOff, Smartphone, Upload, X } from 'lucide-react';
+import config from '../config/env.js';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -106,7 +107,7 @@ const SignUp = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/signup/send-otp', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/signup/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, name: formData.name })
@@ -141,7 +142,7 @@ const SignUp = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/signup/verify-otp', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/signup/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -190,7 +191,7 @@ const SignUp = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/v2/auth/signup/send-otp', {
+      const response = await fetch(`${config.API_BASE_URL}/v2/auth/signup/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, name: formData.name })
@@ -209,41 +210,29 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-screen bg-black flex items-center justify-center p-2 overflow-hidden relative">
       {/* Background gradient effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black"></div>
       <div className="absolute top-20 left-20 w-96 h-96 bg-lime-500/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
 
-      <div className="max-w-4xl w-full mx-auto relative z-10">
+      <div className="max-w-3xl w-full mx-auto relative z-10">
         {/* Back to Home - Top */}
-        <div className="mb-4">
+        <div className="mb-2">
           <Link to="/" className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to home
           </Link>
         </div>
 
-        <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-lime-400 rounded-2xl flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-black" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">PhoneBid</h1>
-                <p className="text-xs text-gray-400">Auction Platform</p>
-              </div>
-            </div>
-          </div>
+        <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl p-4 shadow-2xl">
 
           {/* Title */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
+          <div className="mb-3">
+            <h2 className="text-xl font-bold text-white mb-1">
               {step === 1 ? 'Create your account' : 'Verify your email'}
             </h2>
-            <p className="text-gray-400">
+            <p className="text-gray-400 text-xs">
               {step === 1 
                 ? 'Join PhoneBid and start trading anonymously'
                 : `We sent a 6-digit code to ${formData.email}`
@@ -253,25 +242,25 @@ const SignUp = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-4">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="mb-2 bg-red-500/10 border border-red-500/50 rounded-lg p-2">
+              <p className="text-xs text-red-400">{error}</p>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="mb-6 bg-green-500/10 border border-green-500/50 rounded-xl p-4">
-              <p className="text-sm text-green-400">{success}</p>
+            <div className="mb-2 bg-green-500/10 border border-green-500/50 rounded-lg p-2">
+              <p className="text-xs text-green-400">{success}</p>
             </div>
           )}
 
           {/* Step 1: Registration Form */}
           {step === 1 && (
-            <form onSubmit={handleSubmitForm} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <form onSubmit={handleSubmitForm} className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Full Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Full Name
                   </label>
                   <input
@@ -279,7 +268,7 @@ const SignUp = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-lime-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
+                    className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm"
                     placeholder="Enter your full name"
                     required
                   />
@@ -287,7 +276,7 @@ const SignUp = () => {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Email address
                   </label>
                   <input
@@ -295,7 +284,7 @@ const SignUp = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-lime-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
+                    className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm"
                     placeholder="Enter your email"
                     required
                   />
@@ -303,7 +292,7 @@ const SignUp = () => {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Password
                   </label>
                   <div className="relative">
@@ -312,23 +301,23 @@ const SignUp = () => {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-lime-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-12"
+                      className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
                       placeholder="Create a password"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -337,35 +326,35 @@ const SignUp = () => {
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-lime-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-12"
+                      className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
                       placeholder="Confirm your password"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
               </div>
 
               {/* ID Type and Upload Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Upload Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Upload Government ID <span className="text-lime-400">*</span>
                   </label>
                   <div className="relative">
                     {idProofPreview ? (
-                      <div className="relative bg-gray-800/50 border-2 border-lime-500 rounded-xl p-4">
+                      <div className="relative bg-gray-800/50 border-2 border-lime-500 rounded-lg p-2">
                         <img 
                           src={idProofPreview} 
                           alt="ID Preview" 
-                          className="w-full h-32 object-contain rounded"
+                          className="w-full h-20 object-contain rounded"
                         />
                         <button
                           type="button"
@@ -373,16 +362,15 @@ const SignUp = () => {
                             setFormData({ ...formData, governmentIdProof: '' });
                             setIdProofPreview(null);
                           }}
-                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition"
+                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     ) : (
-                      <label className="flex flex-col items-center justify-center h-40 bg-gray-800/50 border-2 border-dashed border-lime-500 rounded-xl cursor-pointer hover:bg-gray-800/70 transition">
-                        <Upload className="w-10 h-10 text-lime-400 mb-2" />
-                        <span className="text-sm text-gray-300 mb-1">Upload a file or drag</span>
-                        <span className="text-xs text-gray-500">and drop</span>
+                      <label className="flex flex-col items-center justify-center h-24 bg-gray-800/50 border-2 border-dashed border-lime-500 rounded-lg cursor-pointer hover:bg-gray-800/70 transition">
+                        <Upload className="w-6 h-6 text-lime-400 mb-1" />
+                        <span className="text-xs text-gray-300">Upload file</span>
                         <input
                           type="file"
                           accept="image/*,.pdf"
@@ -393,18 +381,19 @@ const SignUp = () => {
                       </label>
                     )}
                   </div>
+                  <p className="mt-1 text-xs text-gray-500">PNG, JPG, PDF up to 5MB</p>
                 </div>
 
                 {/* ID Type Dropdown */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-300 mb-1">
                     Select ID Type <span className="text-lime-400">*</span>
                   </label>
                   <select
                     name="governmentIdType"
                     value={formData.governmentIdType}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-lime-500 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
+                    className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm"
                     required
                   >
                     <option value="" className="bg-gray-800">Select ID Type</option>
@@ -412,11 +401,8 @@ const SignUp = () => {
                     <option value="PAN" className="bg-gray-800">PAN Card</option>
                     <option value="Passport" className="bg-gray-800">Passport</option>
                   </select>
-                  <p className="mt-2 text-xs text-gray-500">
-                    PNG, JPG, PDF up to 55MB
-                  </p>
-                  <p className="mt-2 text-xs text-gray-400">
-                    Please upload a clear photo of government-issued ID...
+                  <p className="mt-1 text-xs text-gray-400">
+                    Clear photo of government-issued ID required
                   </p>
                 </div>
               </div>
@@ -430,7 +416,7 @@ const SignUp = () => {
                   className="w-4 h-4 rounded border-lime-500 bg-gray-800 text-lime-400 focus:ring-lime-400 focus:ring-offset-gray-900"
                   required
                 />
-                <label className="text-sm text-gray-400">
+                <label className="text-xs text-gray-400">
                   I agree to the Terms and Privacy Policy
                 </label>
               </div>
@@ -439,11 +425,11 @@ const SignUp = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-3.5 rounded-full font-bold text-lg hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-2 rounded-lg font-semibold hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
                     Sending OTP...
                   </div>
                 ) : (
@@ -452,7 +438,7 @@ const SignUp = () => {
               </button>
 
               {/* Sign In Link */}
-              <p className="text-center text-sm text-gray-400">
+              <p className="text-center text-xs text-gray-400">
                 Already have an account?{' '}
                 <Link to="/auth/signin" className="text-lime-400 hover:text-lime-300 font-semibold transition">
                   Sign in
@@ -463,12 +449,12 @@ const SignUp = () => {
 
           {/* Step 2: OTP Verification */}
           {step === 2 && (
-            <form onSubmit={handleVerifyOTP} className="space-y-6">
+            <form onSubmit={handleVerifyOTP} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
+                <label className="block text-xs font-medium text-gray-300 mb-3 text-center">
                   Enter the 6-digit code
                 </label>
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-2">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -478,19 +464,19 @@ const SignUp = () => {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-14 h-14 text-center text-2xl font-bold bg-gray-800/50 border-2 border-lime-500 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
+                      className="w-10 h-10 text-center text-lg font-bold bg-gray-800/50 border-2 border-lime-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
                     />
                   ))}
                 </div>
               </div>
 
               <div className="text-center">
-                <p className="text-sm text-gray-400 mb-2">Didn't receive the code?</p>
+                <p className="text-xs text-gray-400 mb-1">Didn't receive the code?</p>
                 <button
                   type="button"
                   onClick={handleResendOTP}
                   disabled={resendTimer > 0 || loading}
-                  className="text-lime-400 hover:text-lime-300 font-semibold disabled:text-gray-600 disabled:cursor-not-allowed transition"
+                  className="text-lime-400 hover:text-lime-300 font-semibold disabled:text-gray-600 disabled:cursor-not-allowed transition text-xs"
                 >
                   {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                 </button>
@@ -499,11 +485,11 @@ const SignUp = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-3.5 rounded-full font-bold text-lg hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-green-500 to-lime-400 text-black py-2 rounded-lg font-semibold hover:from-green-400 hover:to-lime-300 transition-all shadow-lg hover:shadow-lime-400/50 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
                     Verifying...
                   </div>
                 ) : (
@@ -520,9 +506,9 @@ const SignUp = () => {
                     setError('');
                     setSuccess('');
                   }}
-                  className="text-sm text-gray-400 hover:text-gray-300 transition flex items-center justify-center gap-2 mx-auto"
+                  className="text-xs text-gray-400 hover:text-gray-300 transition flex items-center justify-center gap-2 mx-auto"
                 >
-                  <ArrowLeft className="w-4 h-4" />
+                  <ArrowLeft className="w-3 h-3" />
                   Change email address
                 </button>
               </div>
