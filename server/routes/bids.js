@@ -6,12 +6,12 @@ import {
   acceptBid,
   getSellerAuctionBids
 } from '../controllers/bidController.js';
-import { requireAuth } from '../middleware/accessControl.js';
+import { requireAuth, optionalAuth } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
-// Public routes (anyone can view bids)
-router.get('/auction/:auctionId', getAuctionBids);
+// Public routes (anyone can view bids, but auth is optional for personalized view)
+router.get('/auction/:auctionId', optionalAuth, getAuctionBids);
 
 // Authenticated routes
 router.post('/', requireAuth, placeBid);

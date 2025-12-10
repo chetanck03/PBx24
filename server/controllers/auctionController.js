@@ -1,6 +1,7 @@
 import Auction from '../models/Auction.js';
 import Phone from '../models/Phone.js';
 import Bid from '../models/Bid.js';
+import { getCache, setCache, cacheKeys, CACHE_TTL } from '../services/redisService.js';
 
 /**
  * Create auction for a phone
@@ -84,17 +85,55 @@ export const createAuction = async (req, res) => {
 };
 
 /**
- * Get all active auctions
+ * Get all active auctions - OPTIMIZED with Redis caching
  */
 export const getActiveAuctions = async (req, res) => {
   try {
+    const cacheKey = 'auctions:active';
+    
+    // Try cache first for non-admin
+    if (req.userRole !== 'admin') {
+      const cached = await getCache(cacheKey);
+      if (cached) {
+        return res.json({
+          success: true,
+          data: cached,
+          count: cached.length,
+          cached: true
+        });
+      }
+    }
+    
     const auctions = await Auction.find({ status: 'active' })
       .populate('phoneId')
-      .sort({ auctionEndTime: 1 });
+      .sort({ auctionEndTime: 1 })
+      .lean();
     
-    const auctionsData = auctions.map(auction => 
-      req.userRole === 'admin' ? auction.toAdminObject() : auction.toPublicObject()
-    );
+    const auctionsData = auctions.map(auction => ({
+      _id: auction._id,
+      phoneId: auction.phoneId?._id || auction.phoneId,
+      phone: auction.phoneId ? {
+        _id: auction.phoneId._id,
+        brand: auction.phoneId.brand,
+        model: auction.phoneId.model,
+        storage: auction.phoneId.storage,
+        condition: auction.phoneId.condition,
+        images: auction.phoneId.images,
+        location: auction.phoneId.location,
+        anonymousSellerId: auction.phoneId.anonymousSellerId
+      } : null,
+      currentBid: auction.currentBid,
+      totalBids: auction.totalBids,
+      auctionEndTime: auction.auctionEndTime,
+      status: auction.status,
+      anonymousLeadingBidder: auction.anonymousLeadingBidder,
+      createdAt: auction.createdAt
+    }));
+    
+    // Cache for 30 seconds
+    if (req.userRole !== 'admin') {
+      setCache(cacheKey, auctionsData, CACHE_TTL.AUCTION).catch(() => {});
+    }
     
     res.json({
       success: true,
@@ -150,12 +189,25 @@ export const getAuctionById = async (req, res) => {
 };
 
 /**
- * Get auction by phone ID
+ * Get auction by phone ID - OPTIMIZED with Redis caching
  */
 export const getAuctionByPhoneId = async (req, res) => {
   try {
     const { phoneId } = req.params;
-    const auction = await Auction.findOne({ phoneId }).populate('phoneId');
+    
+    // Try cache first for non-admin
+    if (req.userRole !== 'admin') {
+      const cached = await getCache(cacheKeys.auctionByPhone(phoneId));
+      if (cached) {
+        return res.json({
+          success: true,
+          data: cached,
+          cached: true
+        });
+      }
+    }
+    
+    const auction = await Auction.findOne({ phoneId }).populate('phoneId').lean();
     
     if (!auction) {
       return res.status(404).json({
@@ -167,9 +219,22 @@ export const getAuctionByPhoneId = async (req, res) => {
       });
     }
     
-    const auctionData = req.userRole === 'admin' 
-      ? auction.toAdminObject() 
-      : auction.toPublicObject();
+    // Build public auction data
+    const auctionData = {
+      _id: auction._id,
+      phoneId: auction.phoneId?._id || auction.phoneId,
+      currentBid: auction.currentBid,
+      totalBids: auction.totalBids,
+      auctionEndTime: auction.auctionEndTime,
+      status: auction.status,
+      anonymousLeadingBidder: auction.anonymousLeadingBidder,
+      createdAt: auction.createdAt
+    };
+    
+    // Cache for 30 seconds (auction data changes frequently)
+    if (req.userRole !== 'admin') {
+      setCache(cacheKeys.auctionByPhone(phoneId), auctionData, CACHE_TTL.AUCTION).catch(() => {});
+    }
     
     res.json({
       success: true,

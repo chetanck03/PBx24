@@ -20,11 +20,27 @@ import {
 
 const router = express.Router();
 
+// Optional auth middleware - attaches user if token exists, but doesn't require it
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = { _id: decoded.userId };
+    } catch (err) {
+      // Token invalid, continue without user
+    }
+  }
+  next();
+};
+
 // Public routes
 router.get('/all', getAllReels);
 router.get('/user/:userId', getUserReels);
 router.get('/user/:userId/stats', getUserReelStats);
-router.post('/:id/view', incrementReelView);  // Track view when reel is watched
+router.post('/:id/view', optionalAuth, incrementReelView);  // Track unique view per user
 router.get('/:id', getReelById);
 router.get('/:id/comments', getComments);
 

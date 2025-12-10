@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI, reelAPI } from '../services/api';
+import socketService from '../services/socketService';
 import toast from 'react-hot-toast';
 import {
   LayoutDashboard, Users, Smartphone, Receipt, MessageSquare,
   TrendingUp, DollarSign, ShoppingBag, Gavel, UserCheck, Clock,
   ChevronRight, Eye, Check, X, Trash2, RefreshCw, Video, Play, Menu,
-  Activity, BarChart3, PieChart as PieChartIcon, Zap, CheckCircle, ExternalLink, Crown
+  Activity, BarChart3, PieChart as PieChartIcon, Zap, CheckCircle, ExternalLink, Crown, Bell, Wifi, WifiOff
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -20,6 +21,8 @@ const AdminDashboard = () => {
   const [phones, setPhones] = useState([]);
 
   const [complaints, setComplaints] = useState([]);
+  const [newComplaintsCount, setNewComplaintsCount] = useState(0);
+  const [socketConnected, setSocketConnected] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -38,6 +41,75 @@ const AdminDashboard = () => {
   const [roleModalUser, setRoleModalUser] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalUser, setDeleteModalUser] = useState(null);
+
+  // WebSocket for real-time complaint notifications
+  useEffect(() => {
+    console.log('Setting up admin WebSocket...');
+    const socket = socketService.connect();
+    
+    const handleNewComplaint = (newComplaint) => {
+      console.log('New complaint received via WebSocket:', newComplaint);
+      setComplaints(prev => {
+        // Check if complaint already exists to avoid duplicates
+        const exists = prev.some(c => c._id === newComplaint._id);
+        if (exists) return prev;
+        return [newComplaint, ...prev];
+      });
+      setNewComplaintsCount(prev => prev + 1);
+      toast.success(`New complaint: "${newComplaint.subject}"`, {
+        icon: '📩',
+        duration: 5000
+      });
+    };
+
+    const handleComplaintStatusChanged = (data) => {
+      console.log('Complaint status changed:', data);
+      setComplaints(prev => 
+        prev.map(c => c._id === data.complaintId ? data.complaint : c)
+      );
+    };
+
+    const handleConnect = () => {
+      console.log('Admin socket connected, joining admin_complaints room');
+      setSocketConnected(true);
+      socketService.joinAdminComplaints();
+    };
+
+    const handleDisconnect = () => {
+      console.log('Admin socket disconnected');
+      setSocketConnected(false);
+    };
+    
+    if (socket) {
+      // Join admin room immediately if already connected
+      if (socket.connected) {
+        console.log('Socket already connected, joining admin_complaints room');
+        setSocketConnected(true);
+        socketService.joinAdminComplaints();
+      }
+      
+      // Track connection status
+      socket.on('connect', handleConnect);
+      socket.on('disconnect', handleDisconnect);
+
+      // Listen for new complaints in real-time
+      socket.on('new_complaint', handleNewComplaint);
+
+      // Listen for complaint status changes
+      socket.on('complaint_status_changed', handleComplaintStatusChanged);
+    }
+
+    return () => {
+      console.log('Cleaning up admin WebSocket...');
+      socketService.leaveAdminComplaints();
+      if (socket) {
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
+        socket.off('new_complaint', handleNewComplaint);
+        socket.off('complaint_status_changed', handleComplaintStatusChanged);
+      }
+    };
+  }, []);
 
   const loadDashboardData = useCallback(async (silent = false) => {
     try {
@@ -131,11 +203,14 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
+    // Load complaints on initial load so WebSocket updates work properly
+    loadComplaints();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
-    if (activeTab === 'complaints' && complaints.length === 0) loadComplaints();
+    // Refresh complaints when switching to complaints tab
+    if (activeTab === 'complaints') loadComplaints();
     if (activeTab === 'sold-phones' && soldPhones.length === 0) loadSoldPhones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -261,8 +336,15 @@ const AdminDashboard = () => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'phones', label: 'Phones', icon: Smartphone },
     { id: 'sold-phones', label: 'Sold Phones', icon: CheckCircle },
-    { id: 'complaints', label: 'Complaints', icon: MessageSquare },
-  ], []);
+    { id: 'complaints', label: 'Complaints', icon: MessageSquare, badge: newComplaintsCount > 0 ? newComplaintsCount : null },
+  ], [newComplaintsCount]);
+
+  // Clear new complaints badge when viewing complaints tab
+  useEffect(() => {
+    if (activeTab === 'complaints') {
+      setNewComplaintsCount(0);
+    }
+  }, [activeTab]);
 
   const StatusBadge = ({ status }) => {
     const colors = {
@@ -312,9 +394,14 @@ const AdminDashboard = () => {
             <nav className="space-y-2">
               {sidebarItems.map((item) => (
                 <button key={item.id} onClick={() => { setActiveTab(item.id); setSelectedUser(null); setMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === item.id ? 'bg-[#c4ff0d] text-black' : 'text-gray-400 hover:bg-[#1a1a1a]'}`}>
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition relative ${activeTab === item.id ? 'bg-[#c4ff0d] text-black' : 'text-gray-400 hover:bg-[#1a1a1a]'}`}>
                   <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
+                  {item.badge && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -335,9 +422,25 @@ const AdminDashboard = () => {
         <nav className="flex-1 p-4 space-y-2">
           {sidebarItems.map((item) => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setSelectedUser(null); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${activeTab === item.id ? 'bg-[#c4ff0d] text-black' : 'text-gray-400 hover:bg-[#1a1a1a]'}`}>
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition relative ${activeTab === item.id ? 'bg-[#c4ff0d] text-black' : 'text-gray-400 hover:bg-[#1a1a1a]'}`}>
+              <div className="relative">
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                {item.badge && sidebarCollapsed && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </div>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="font-medium">{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
+                </>
+              )}
             </button>
           ))}
         </nav>
@@ -359,6 +462,13 @@ const AdminDashboard = () => {
               <p className="text-gray-500 text-sm mt-1 hidden sm:block">Manage your platform</p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Real-time connection indicator */}
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                socketConnected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+              }`}>
+                {socketConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                {socketConnected ? 'Live' : 'Offline'}
+              </div>
               <button onClick={loadDashboardData} className="p-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] rounded-xl transition flex-shrink-0">
                 <RefreshCw className="w-5 h-5 text-gray-400" />
               </button>

@@ -31,6 +31,11 @@ export const reelAPI = {
     return api.get(`/reels/user/${userId}`, { params: { page, limit } });
   },
 
+  // Get user reel statistics (total views, likes, etc.)
+  getUserReelStats: (userId) => {
+    return api.get(`/reels/user/${userId}/stats`);
+  },
+
   // Get current user's reels
   getMyReels: (page = 1, limit = 12) => {
     return api.get('/reels/my/reels', { params: { page, limit } });

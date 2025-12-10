@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { phoneAPI, auctionAPI, bidAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import socketService from '../services/socketService';
+import toast from 'react-hot-toast';
 
-import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, Trophy, LogIn, Gavel, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, Trophy, LogIn, Gavel, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 
 const PhoneDetail = () => {
   const { id } = useParams();
@@ -22,10 +24,83 @@ const PhoneDetail = () => {
   const [selectedBidToAccept, setSelectedBidToAccept] = useState(null);
   const [acceptingBid, setAcceptingBid] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
+  const [socketConnected, setSocketConnected] = useState(false);
 
   useEffect(() => {
     loadPhoneDetails();
   }, [id]);
+
+  // WebSocket connection for real-time bid updates
+  useEffect(() => {
+    if (!id) return;
+
+    // Connect and get socket instance
+    const socket = socketService.connect();
+    
+    const handleNewBid = (data) => {
+      // Check if this bid is for the current phone
+      if (data.phoneId === id || data.phoneId === phone?._id) {
+        // Update bids list - add new bid at the beginning
+        setBids(prev => {
+          // Check if bid already exists by ID
+          const exists = prev.some(b => b._id === data.bid._id);
+          if (exists) return prev;
+          // Remove any duplicates first, then mark all as not winning
+          const uniqueBids = prev.filter((b, i, arr) => arr.findIndex(x => x._id === b._id) === i);
+          const updatedBids = uniqueBids.map(b => ({ ...b, isWinning: false }));
+          return [{ ...data.bid, isWinning: true }, ...updatedBids];
+        });
+        
+        // Update auction data
+        if (data.auction) {
+          setAuction(prev => prev ? {
+            ...prev,
+            currentBid: data.auction.currentBid,
+            totalBids: data.auction.totalBids,
+            anonymousLeadingBidder: data.auction.anonymousLeadingBidder
+          } : prev);
+        }
+        
+        // Show toast notification for other users
+        if (user?.anonymousId !== data.bid.anonymousBidderId) {
+          toast.success(`New bid: ₹${data.bid.bidAmount.toLocaleString()}`, {
+            icon: '💰',
+            duration: 3000
+          });
+        }
+      }
+    };
+
+    const handleConnect = () => {
+      setSocketConnected(true);
+    };
+
+    const handleDisconnect = () => {
+      setSocketConnected(false);
+    };
+    
+    // Set up event listeners
+    if (socket) {
+      socket.on('connect', handleConnect);
+      socket.on('disconnect', handleDisconnect);
+      socket.on('new_bid', handleNewBid);
+    }
+
+    // Join the phone room (socketService handles pending rooms if not connected yet)
+    socketService.joinPhoneRoom(id);
+    
+    // Update connection status
+    setSocketConnected(socketService.isSocketConnected());
+
+    return () => {
+      socketService.leavePhoneRoom(id);
+      if (socket) {
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
+        socket.off('new_bid', handleNewBid);
+      }
+    };
+  }, [id, user?.anonymousId, phone?._id]);
 
   const loadPhoneDetails = async () => {
     try {
@@ -42,7 +117,10 @@ const PhoneDetail = () => {
         
         try {
           const bidsRes = await bidAPI.getAuctionBids(auctionRes.data.data._id);
-          setBids(bidsRes.data.data || []);
+          // Deduplicate bids by _id
+          const bidsData = bidsRes.data.data || [];
+          const uniqueBids = bidsData.filter((b, i, arr) => arr.findIndex(x => x._id === b._id) === i);
+          setBids(uniqueBids);
         } catch (bidError) {
           console.error('Error loading bids:', bidError);
           setBids([]);
@@ -56,6 +134,9 @@ const PhoneDetail = () => {
     }
   };
 
+  // Maximum bid limit (10 Crore = 100 Million INR) - reasonable for phone auctions
+  const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 (10 Crore)
+
   const handlePlaceBid = async (e) => {
     e.preventDefault();
     setError('');
@@ -67,23 +148,76 @@ const PhoneDetail = () => {
     }
     
     const amount = parseFloat(bidAmount);
-    const minBid = Math.max(auction.currentBid, phone.minBidPrice) + 1;
     
-    if (amount < minBid) {
-      setError(`Bid must be at least ₹${minBid}`);
+    // Validate bid is a valid number
+    if (isNaN(amount) || !isFinite(amount)) {
+      setError('Please enter a valid bid amount');
+      return;
+    }
+    
+    // Maximum bid validation - prevent absurdly large bids
+    if (amount > MAX_BID_AMOUNT) {
+      setError(`Maximum bid amount is ₹${MAX_BID_AMOUNT.toLocaleString()} (₹10 Crore)`);
       return;
     }
     
     try {
       setSubmitting(true);
-      await bidAPI.placeBid(auction._id, amount);
+      
+      // First refresh auction data to get latest current bid (prevents stale data issues)
+      let currentAuction = auction;
+      try {
+        const freshAuctionRes = await auctionAPI.getAuctionByPhoneId(id);
+        if (freshAuctionRes?.data?.data) {
+          currentAuction = freshAuctionRes.data.data;
+          setAuction(currentAuction);
+        }
+      } catch (e) {
+        // Using cached auction data
+      }
+      
+      // Validate against fresh data - bidding starts from ₹1 or current bid + 1
+      const minBid = (currentAuction.currentBid || 0) + 1;
+      if (amount < minBid) {
+        setError(`Bid must be at least ₹${minBid.toLocaleString()}`);
+        setSubmitting(false);
+        return;
+      }
+      
+      // Place bid
+      const response = await bidAPI.placeBid(currentAuction._id, amount);
       setSuccess('Bid placed successfully!');
       setBidAmount('');
       
-      setTimeout(() => {
-        loadPhoneDetails();
-        setSuccess('');
-      }, 1500);
+      // Update auction current bid immediately for responsive UI
+      if (response.data.data) {
+        const newBid = response.data.data;
+        
+        // Update auction stats immediately
+        setAuction(prev => prev ? {
+          ...prev,
+          currentBid: amount,
+          totalBids: (prev.totalBids || 0) + 1,
+          anonymousLeadingBidder: newBid.anonymousBidderId
+        } : prev);
+        
+        // Only add bid to list if WebSocket is NOT connected (fallback)
+        // When WebSocket is connected, it will handle adding the bid to avoid duplicates
+        if (!socketConnected) {
+          setBids(prev => {
+            const exists = prev.some(b => b._id === newBid._id);
+            if (exists) return prev;
+            
+            // Remove any duplicates first, then mark all as not winning
+            const uniqueBids = prev.filter((b, i, arr) => arr.findIndex(x => x._id === b._id) === i);
+            const updatedBids = uniqueBids.map(b => ({ ...b, isWinning: false }));
+            return [{ ...newBid, isWinning: true }, ...updatedBids];
+          });
+        }
+      }
+      
+      // Clear success message after delay
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Bid error:', error);
       const errorMessage = error.response?.data?.error?.message || 
@@ -91,15 +225,30 @@ const PhoneDetail = () => {
                           error.message ||
                           'Failed to place bid';
       setError(errorMessage);
+      
+      // Refresh all data on any error to show current state
+      try {
+        const [auctionRes, bidsRes] = await Promise.all([
+          auctionAPI.getAuctionByPhoneId(id),
+          auction?._id ? bidAPI.getAuctionBids(auction._id) : Promise.resolve({ data: { data: [] } })
+        ]);
+        if (auctionRes?.data?.data) setAuction(auctionRes.data.data);
+        if (bidsRes?.data?.data) {
+          // Deduplicate bids by _id
+          const uniqueBids = bidsRes.data.data.filter((b, i, arr) => arr.findIndex(x => x._id === b._id) === i);
+          setBids(uniqueBids);
+        }
+      } catch (e) {
+        // Could not refresh data
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Check if current user is the seller
+  // Check if current user is the seller - only compare anonymousId since sellerId is not returned in public view
   const isOwner = isAuthenticated && user && phone && 
-    (user.anonymousId === phone.anonymousSellerId || user._id === phone.sellerId);
-
+    user.anonymousId === phone.anonymousSellerId;
   // Check if auction is truly active (not ended, not sold, status is active)
   const isAuctionActive = auction && 
     auction.status === 'active' && 
@@ -180,14 +329,14 @@ const PhoneDetail = () => {
     return () => clearInterval(interval);
   }, [auction]);
   
-  // Auto-refresh bids every 30 seconds (reduced from 5s to prevent constant reloading)
+  // Auto-refresh auction and bids every 10 seconds for real-time updates
   useEffect(() => {
     if (!auction || timeRemaining.ended) return;
     
     const interval = setInterval(() => {
-      // Only refresh bids, not the entire page
+      // Refresh both auction and bids to keep data fresh
       refreshBids();
-    }, 30000);
+    }, 10000);
     
     return () => clearInterval(interval);
   }, [auction?._id, timeRemaining.ended]);
@@ -200,7 +349,10 @@ const PhoneDetail = () => {
         bidAPI.getAuctionBids(auction._id).catch(() => ({ data: { data: [] } }))
       ]);
       if (auctionRes?.data?.data) setAuction(auctionRes.data.data);
-      setBids(bidsRes.data.data || []);
+      // Deduplicate bids by _id before setting
+      const bidsData = bidsRes.data.data || [];
+      const uniqueBids = bidsData.filter((b, i, arr) => arr.findIndex(x => x._id === b._id) === i);
+      setBids(uniqueBids);
     } catch (error) {
       console.error('Error refreshing bids:', error);
     }
@@ -319,7 +471,24 @@ const PhoneDetail = () => {
             {auction && (
               <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-white">Auction Details</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-white">Auction Details</h2>
+                    {/* Real-time connection indicator */}
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
+                      socketConnected ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {socketConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                      {socketConnected ? 'Live' : 'Offline'}
+                    </div>
+                    {/* Refresh button */}
+                    <button
+                      onClick={refreshBids}
+                      className="p-1 hover:bg-[#1a1a1a] rounded-full transition"
+                      title="Refresh auction data"
+                    >
+                      <Clock className="w-4 h-4 text-gray-400 hover:text-[#c4ff0d]" />
+                    </button>
+                  </div>
                   {auction.status === 'active' && !timeRemaining.ended ? (
                     <span className="bg-[#c4ff0d] text-black text-xs font-bold px-3 py-1 rounded">
                       LIVE
@@ -342,14 +511,17 @@ const PhoneDetail = () => {
                 <div className="mb-4">
                   <p className="text-sm text-gray-400 mb-1">Current Bid:</p>
                   <p className="text-5xl font-bold text-[#c4ff0d]">
-                    ₹{(auction.currentBid || phone.minBidPrice).toLocaleString()}
+                    {auction.currentBid > 0 ? `₹${auction.currentBid.toLocaleString()}` : 'No bids yet'}
                   </p>
+                  {auction.currentBid === 0 && (
+                    <p className="text-sm text-gray-500 mt-1">Be the first to bid!</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-sm text-gray-400">Minimum Bid:</p>
-                    <p className="text-white font-semibold">₹{phone.minBidPrice.toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">Starting Bid:</p>
+                    <p className="text-white font-semibold">₹1</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Total Bids:</p>
@@ -407,8 +579,16 @@ const PhoneDetail = () => {
                             <input
                               type="number"
                               value={bidAmount}
-                              onChange={(e) => setBidAmount(e.target.value)}
-                              placeholder={`Min: ₹${(Math.max(auction.currentBid || 0, phone.minBidPrice) + 1).toLocaleString()}`}
+                              onChange={(e) => {
+                                // Limit input to reasonable length (max 9 digits = up to 10 Crore)
+                                const value = e.target.value;
+                                if (value.length <= 9) {
+                                  setBidAmount(value);
+                                }
+                              }}
+                              min={(auction.currentBid || 0) + 1}
+                              max={MAX_BID_AMOUNT}
+                              placeholder={`Min: ₹${((auction.currentBid || 0) + 1).toLocaleString()}`}
                               className="w-full pl-8 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#c4ff0d] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#c4ff0d] transition"
                               required
                             />
@@ -421,6 +601,11 @@ const PhoneDetail = () => {
                             {submitting ? 'Placing...' : 'Place Bid'}
                           </button>
                         </div>
+                        
+                        {/* Bid limits info */}
+                        <p className="text-xs text-gray-500">
+                          Max bid: ₹{MAX_BID_AMOUNT.toLocaleString()} • Bid must be higher than current
+                        </p>
 
                         {error && (
                           <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
@@ -471,10 +656,10 @@ const PhoneDetail = () => {
                   {phone.status === 'pending' ? 'Auction Pending' : 'Place Your Bid'}
                 </h2>
                 <div className="mb-4">
-                  <p className="text-sm text-gray-400 mb-1">Starting Price:</p>
-                  <p className="text-4xl font-bold text-[#c4ff0d]">
-                    ₹{phone.minBidPrice?.toLocaleString()}
-                  </p>
+                  <div className="bg-[#1a2a1a] border border-[#c4ff0d]/30 rounded-lg p-4">
+                    <p className="text-[#c4ff0d] font-semibold">Bidding starts from ₹1</p>
+                    <p className="text-gray-400 text-sm mt-1">Buyers decide the price through competitive bidding</p>
+                  </div>
                 </div>
                 
                 {phone.status === 'pending' ? (
@@ -560,12 +745,24 @@ const PhoneDetail = () => {
             {/* Bid History */}
             <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-white">Bid History</h3>
-                {isOwner && bids.length > 0 && isAuctionActive && (
-                  <span className="text-xs text-gray-400 bg-[#1a1a1a] px-3 py-1 rounded-full">
-                    You can accept any bid
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white">Bid History</h3>
+                  <span className="text-xs text-gray-500">({bids.length} bids)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isOwner && bids.length > 0 && isAuctionActive && (
+                    <span className="text-xs text-gray-400 bg-[#1a1a1a] px-3 py-1 rounded-full">
+                      You can accept any bid
+                    </span>
+                  )}
+                  <button
+                    onClick={refreshBids}
+                    className="p-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] rounded-lg transition"
+                    title="Refresh bids"
+                  >
+                    <Clock className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
               </div>
               
               {bids.length === 0 ? (
@@ -575,9 +772,9 @@ const PhoneDetail = () => {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin scrollbar-track-dark scrollbar-thumb-green scrollbar-thumb-rounded-full pr-2">
-                  {bids.map((bid) => (
+                  {bids.map((bid, index) => (
                     <div 
-                      key={bid._id} 
+                      key={`${bid._id}-${index}`} 
                       className={`p-4 rounded-xl border ${
                         bid.isWinning 
                           ? 'bg-[#c4ff0d]/10 border-[#c4ff0d]' 

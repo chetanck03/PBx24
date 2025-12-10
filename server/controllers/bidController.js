@@ -3,148 +3,144 @@ import Auction from '../models/Auction.js';
 import Phone from '../models/Phone.js';
 import User from '../models/User.js';
 import { sendBidAcceptanceEmail, sendBidAcceptanceEmailToSeller } from '../services/emailService.js';
+import { getCache, setCache, invalidateAuctionCache, cacheKeys, CACHE_TTL } from '../services/redisService.js';
 
 /**
- * Place a bid on an auction
+ * Place a bid on an auction - OPTIMIZED for speed
  */
 export const placeBid = async (req, res) => {
   try {
-    console.log('=== PLACE BID REQUEST ===');
-    console.log('User ID:', req.userId);
-    console.log('Body:', req.body);
-    
     const { auctionId, bidAmount } = req.body;
     
     if (!auctionId || !bidAmount) {
-      console.log('Missing fields');
       return res.status(400).json({
         success: false,
-        error: {
-          message: 'Auction ID and bid amount are required',
-          code: 'MISSING_FIELDS'
-        }
+        error: { message: 'Auction ID and bid amount are required', code: 'MISSING_FIELDS' }
       });
     }
     
-    // Get auction
-    const auction = await Auction.findById(auctionId).populate('phoneId');
+    // Validate bid amount is a valid number
+    if (typeof bidAmount !== 'number' || isNaN(bidAmount) || !isFinite(bidAmount)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid bid amount', code: 'INVALID_BID_AMOUNT' }
+      });
+    }
+    
+    // Maximum bid limit
+    const MAX_BID_AMOUNT = 100000000;
+    if (bidAmount > MAX_BID_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Maximum bid amount is ₹${MAX_BID_AMOUNT.toLocaleString()}`, code: 'BID_TOO_HIGH' }
+      });
+    }
+    
+    // Get auction and user in parallel for speed
+    const [auction, bidder] = await Promise.all([
+      Auction.findById(auctionId).populate('phoneId'),
+      User.findById(req.userId).select('anonymousId')
+    ]);
+    
     if (!auction) {
       return res.status(404).json({
         success: false,
-        error: {
-          message: 'Auction not found',
-          code: 'AUCTION_NOT_FOUND'
-        }
+        error: { message: 'Auction not found', code: 'AUCTION_NOT_FOUND' }
       });
     }
     
-    // Check if auction is active
-    if (auction.status !== 'active') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Auction is not active',
-          code: 'AUCTION_NOT_ACTIVE'
-        }
-      });
-    }
-    
-    // Check if auction has ended
-    if (new Date() > auction.auctionEndTime) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Auction has ended',
-          code: 'AUCTION_ENDED'
-        }
-      });
-    }
-    
-    // Check if user is not the seller
-    const phone = auction.phoneId;
-    console.log('Phone seller ID:', phone.sellerId.toString());
-    console.log('Current user ID:', req.userId);
-    console.log('Is same user?', phone.sellerId.toString() === req.userId);
-    
-    if (phone.sellerId.toString() === req.userId) {
-      console.log('User trying to bid on own listing');
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Cannot bid on your own listing',
-          code: 'CANNOT_BID_OWN'
-        }
-      });
-    }
-    
-    // Check if bid is higher than current bid
-    const minBidAmount = Math.max(auction.currentBid, phone.minBidPrice);
-    console.log('Min bid amount:', minBidAmount);
-    console.log('User bid amount:', bidAmount);
-    console.log('Is bid high enough?', bidAmount > minBidAmount);
-    
-    if (bidAmount <= minBidAmount) {
-      console.log('Bid too low');
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: `Bid must be higher than ₹${minBidAmount}`,
-          code: 'BID_TOO_LOW'
-        }
-      });
-    }
-    
-    // Get bidder info
-    let bidder = await User.findById(req.userId);
     if (!bidder) {
       return res.status(404).json({
         success: false,
-        error: {
-          message: 'User not found',
-          code: 'USER_NOT_FOUND'
-        }
+        error: { message: 'User not found', code: 'USER_NOT_FOUND' }
       });
     }
     
-    // Ensure user has an anonymousId (for users created before this field was added)
-    if (!bidder.anonymousId) {
-      console.log('User missing anonymousId, generating one...');
-      // The pre-save hook will generate it
-      await bidder.save();
-      // Reload the user to get the generated anonymousId
-      bidder = await User.findById(req.userId);
-      console.log('Generated anonymousId:', bidder.anonymousId);
+    // Quick validations
+    if (auction.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Auction is not active', code: 'AUCTION_NOT_ACTIVE' }
+      });
     }
     
-    console.log('Using anonymousBidderId:', bidder.anonymousId);
+    if (new Date() > auction.auctionEndTime) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Auction has ended', code: 'AUCTION_ENDED' }
+      });
+    }
     
-    // Update previous winning bids
-    await Bid.updateMany(
-      { auctionId, isWinning: true },
-      { isWinning: false }
-    );
+    const phone = auction.phoneId;
+    if (phone.sellerId.toString() === req.userId) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Cannot bid on your own listing', code: 'CANNOT_BID_OWN' }
+      });
+    }
+    
+    // Bidding starts from ₹1 - buyers decide the price
+    const minBidAmount = auction.currentBid || 0;
+    if (bidAmount <= minBidAmount) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Bid must be higher than ₹${minBidAmount.toLocaleString()}`, code: 'BID_TOO_LOW' }
+      });
+    }
+    
+    // Prevent unreasonably high bids
+    const currentBidValue = auction.currentBid || 1;
+    if (bidAmount > currentBidValue * 100 && currentBidValue > 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Bid cannot be more than 100x the current bid`, code: 'BID_UNREASONABLE' }
+      });
+    }
+    
+    // Get or generate anonymousId
+    let anonymousId = bidder.anonymousId;
+    if (!anonymousId) {
+      await bidder.save(); // This will trigger pre-save hook to generate anonymousId
+      anonymousId = bidder.anonymousId;
+    }
     
     // Create new bid
     const bid = new Bid({
       auctionId,
       bidAmount,
       isWinning: true,
-      anonymousBidderId: bidder.anonymousId // Use user's existing anonymous ID
+      anonymousBidderId: anonymousId
     });
-    
-    // Encrypt bidder ID
     bid.setBidder(req.userId);
     
-    console.log('Saving bid...');
-    await bid.save();
-    console.log('Bid saved successfully');
-    
     // Update auction
-    auction.updateBid(bidAmount, req.userId, bid.anonymousBidderId);
-    await auction.save();
+    auction.updateBid(bidAmount, req.userId, anonymousId);
     
-    console.log('Bid placed successfully!');
-    console.log('=== END PLACE BID ===');
+    // Save bid, auction, and update previous bids in parallel
+    await Promise.all([
+      bid.save(),
+      auction.save(),
+      Bid.updateMany({ auctionId, isWinning: true, _id: { $ne: bid._id } }, { isWinning: false })
+    ]);
+    
+    // Invalidate Redis cache for this auction (non-blocking)
+    invalidateAuctionCache(auctionId, phone._id.toString()).catch(() => {});
+    
+    // Emit WebSocket event (non-blocking)
+    const io = req.app.get('io');
+    if (io) {
+      const bidData = {
+        bid: bid.toPublicObject(),
+        auction: {
+          _id: auction._id,
+          currentBid: auction.currentBid,
+          totalBids: auction.totalBids,
+          anonymousLeadingBidder: auction.anonymousLeadingBidder
+        },
+        phoneId: phone._id.toString()
+      };
+      io.to(`phone_${phone._id}`).emit('new_bid', bidData);
+    }
     
     res.status(201).json({
       success: true,
@@ -152,28 +148,10 @@ export const placeBid = async (req, res) => {
       message: 'Bid placed successfully'
     });
   } catch (error) {
-    console.error('=== BID ERROR ===');
-    console.error('Error:', error);
-    console.error('Stack:', error.stack);
-    
-    // Write to log file for debugging
-    const fs = require('fs');
-    const logMessage = `
-=== BID ERROR ${new Date().toISOString()} ===
-User ID: ${req.userId}
-Error: ${error.message}
-Stack: ${error.stack}
-=====================================
-`;
-    fs.appendFileSync('bid-errors.log', logMessage);
-    
+    console.error('Bid error:', error.message);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error placing bid',
-        code: 'BID_ERROR',
-        details: error.message
-      }
+      error: { message: 'Error placing bid', code: 'BID_ERROR', details: error.message }
     });
   }
 };
@@ -344,8 +322,8 @@ export const acceptBid = async (req, res) => {
       });
     }
     
-    // Check if user is the seller
-    if (phone.sellerId.toString() !== req.userId && req.userRole !== 'admin') {
+    // Check if user is the seller - ONLY the seller can accept bids (not even admin)
+    if (phone.sellerId.toString() !== req.userId) {
       return res.status(403).json({
         success: false,
         error: {

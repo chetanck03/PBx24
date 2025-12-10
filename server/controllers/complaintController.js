@@ -19,6 +19,9 @@ export const createComplaint = async (req, res) => {
       });
     }
     
+    // Get user info for the complaint
+    const user = await User.findById(req.userId);
+    
     const complaint = new Complaint({
       userId: req.userId,
       subject,
@@ -34,6 +37,31 @@ export const createComplaint = async (req, res) => {
     
     await complaint.save();
     console.log('Complaint saved successfully:', complaint._id);
+    
+    // Emit real-time event to admin dashboard
+    const io = req.app.get('io');
+    if (io) {
+      const complaintData = {
+        ...complaint.toDetailedObject(),
+        userId: {
+          _id: user?._id,
+          name: user?.name || 'Unknown',
+          anonymousId: user?.anonymousId || 'Unknown',
+          email: user?.email
+        }
+      };
+      
+      // Check how many clients are in the admin_complaints room
+      const room = io.sockets.adapter.rooms.get('admin_complaints');
+      const numClients = room ? room.size : 0;
+      console.log(`admin_complaints room has ${numClients} clients`);
+      
+      // Emit to admin room for real-time updates
+      io.to('admin_complaints').emit('new_complaint', complaintData);
+      console.log('Emitted new_complaint event to admin_complaints room:', complaintData._id);
+    } else {
+      console.log('Socket.io not available');
+    }
     
     res.status(201).json({
       success: true,
@@ -204,6 +232,8 @@ export const updateComplaintStatus = async (req, res) => {
       });
     }
     
+    const previousStatus = complaint.status;
+    
     if (status) complaint.status = status;
     if (adminResponse) complaint.adminResponse = adminResponse;
     if (adminNotes) complaint.adminNotes = adminNotes;
@@ -215,6 +245,25 @@ export const updateComplaintStatus = async (req, res) => {
     }
     
     await complaint.save();
+    
+    // Emit real-time event to the user who filed the complaint
+    const io = req.app.get('io');
+    if (io) {
+      const complaintData = complaint.toDetailedObject();
+      
+      // Emit to the specific user's room
+      io.to(`user_${complaint.userId}`).emit('complaint_updated', complaintData);
+      
+      // Also emit to admin room
+      io.to('admin_complaints').emit('complaint_status_changed', {
+        complaintId: complaint._id,
+        previousStatus,
+        newStatus: complaint.status,
+        complaint: complaintData
+      });
+      
+      console.log(`Emitted complaint_updated event to user_${complaint.userId}`);
+    }
     
     res.json({
       success: true,

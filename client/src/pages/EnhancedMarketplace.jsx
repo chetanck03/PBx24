@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { phoneAPI, auctionAPI } from '../services/api';
+import { useState, useEffect, useRef } from 'react';
+import { phoneAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import socketService from '../services/socketService';
+import toast from 'react-hot-toast';
 
 
 const EnhancedMarketplace = () => {
@@ -31,7 +33,7 @@ const EnhancedMarketplace = () => {
   const isInitialMount = useRef(true);
 
   const brands = ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Vivo', 'Oppo', 'Realme', 'Google', 'Motorola', 'Nothing'];
-  const conditions = ['Excellent', 'Good', 'Fair', 'Poor'];
+  const conditions = ['Excellent', 'Good', 'Fair']; // Match selling form options
   const storageOptions = ['64GB', '128GB', '256GB', '512GB', '1TB'];
   const ramOptions = ['4GB', '6GB', '8GB', '12GB', '16GB'];
   const indianStates = [
@@ -52,47 +54,85 @@ const EnhancedMarketplace = () => {
     loadPhones();
   }, []);
 
+  // WebSocket for real-time new listings
+  useEffect(() => {
+    const socket = socketService.connect();
+    
+    const handleNewListing = (data) => {
+      console.log('New listing received:', data);
+      if (data.phone) {
+        // Add new phone to the list at the beginning
+        setPhones(prev => {
+          // Check if phone already exists
+          const exists = prev.some(p => p._id === data.phone._id);
+          if (exists) return prev;
+          return [data.phone, ...prev];
+        });
+        
+        // Add auction data if available
+        if (data.auction) {
+          setAuctions(prev => ({
+            ...prev,
+            [data.phone._id]: data.auction
+          }));
+        }
+        
+        // Show toast notification
+        toast.success(`New listing: ${data.phone.brand} ${data.phone.model}`, {
+          icon: '📱',
+          duration: 4000
+        });
+      }
+    };
+    
+    // Join marketplace room
+    socketService.joinMarketplace();
+    
+    // Listen for new listings
+    if (socket) {
+      socket.on('new_listing', handleNewListing);
+    }
+    
+    return () => {
+      socketService.leaveMarketplace();
+      if (socket) {
+        socket.off('new_listing', handleNewListing);
+      }
+    };
+  }, []);
+
   const loadPhones = async () => {
     try {
       setLoading(true);
       
       // Build params with separate state and city for better filtering
       const params = {
-        status: 'live',
-        brand: filters.brand,
-        condition: filters.condition,
-        storage: filters.storage,
-        ram: filters.ram,
-        minPrice: filters.minPrice,
-        maxPrice: filters.maxPrice
+        brand: filters.brand || undefined,
+        condition: filters.condition || undefined,
+        storage: filters.storage || undefined,
+        ram: filters.ram || undefined,
+        minPrice: filters.minPrice || undefined,
+        maxPrice: filters.maxPrice || undefined
       };
       
-      // Add location filters - send state and city separately
-      if (selectedState) {
-        params.state = selectedState;
-      }
-      if (cityInput) {
-        params.city = cityInput;
-      }
-      // Also send combined location for backward compatibility
-      if (filters.location) {
-        params.location = filters.location;
-      }
+      // Add location filters
+      if (selectedState) params.state = selectedState;
+      if (cityInput) params.city = cityInput;
+      if (filters.location) params.location = filters.location;
       
-      const res = await phoneAPI.getAllPhones(params);
+      // Remove undefined params
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+      
+      // Use optimized marketplace endpoint - single call for phones + auctions
+      const res = await phoneAPI.getMarketplace(params);
       const allPhones = res.data.data;
       setPhones(allPhones);
       
-      // Load auctions for each phone
-      const auctionPromises = allPhones.map(phone => 
-        auctionAPI.getAuctionByPhoneId(phone._id).catch(() => null)
-      );
-      const auctionResults = await Promise.all(auctionPromises);
-      
+      // Extract auctions from the response (already included)
       const auctionMap = {};
-      auctionResults.forEach((result, index) => {
-        if (result?.data?.data) {
-          auctionMap[allPhones[index]._id] = result.data.data;
+      allPhones.forEach(phone => {
+        if (phone.auction) {
+          auctionMap[phone._id] = phone.auction;
         }
       });
       setAuctions(auctionMap);
@@ -212,6 +252,22 @@ const EnhancedMarketplace = () => {
                     className="w-full p-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg text-white">
                     <option value="">All Storage</option>
                     {storageOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-white text-sm mb-2 block">RAM</label>
+                  <select value={filters.ram} onChange={(e) => handleFilterChange('ram', e.target.value)}
+                    className="w-full p-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg text-white">
+                    <option value="">All RAM</option>
+                    {ramOptions.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-white text-sm mb-2 block">State</label>
+                  <select value={selectedState} onChange={(e) => { setSelectedState(e.target.value); handleFilterChange('location', e.target.value); }}
+                    className="w-full p-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg text-white">
+                    <option value="">All States</option>
+                    {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <button onClick={() => { loadPhones(); setMobileFiltersOpen(false); }}
@@ -600,7 +656,7 @@ const EnhancedMarketplace = () => {
                           <div className="text-xs text-gray-500 mb-1">Current Bid</div>
                           <div className="flex items-baseline gap-2">
                             <span className="text-2xl font-bold text-[#c4ff0d]">
-                              ₹{(auction?.currentBid || phone.minBidPrice)?.toLocaleString()}
+                              {auction?.currentBid > 0 ? `₹${auction.currentBid.toLocaleString()}` : 'No bids yet'}
                             </span>
                             <div className="flex items-center gap-1 text-gray-400 text-xs">
                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

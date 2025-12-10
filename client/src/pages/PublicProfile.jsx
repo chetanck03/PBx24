@@ -178,15 +178,6 @@ const PublicProfile = () => {
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 mt-4">
-            <button className="flex-1 bg-[#c4ff0d] text-black py-2.5 rounded-lg font-semibold hover:bg-[#d4ff3d] transition">
-              Follow
-            </button>
-            <button className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] text-white py-2.5 rounded-lg font-semibold hover:bg-[#2a2a2a] transition">
-              Message
-            </button>
-          </div>
         </div>
 
         {/* Tabs */}
@@ -273,9 +264,9 @@ const PublicProfile = () => {
                       {/* Info */}
                       <div className="p-3">
                         <p className="text-[#c4ff0d] font-bold">
-                          ₹{(listing.currentBid || listing.minBidPrice).toLocaleString()}
+                          {listing.currentBid > 0 ? `₹${listing.currentBid.toLocaleString()}` : 'No bids yet'}
                           <span className="text-gray-500 text-xs font-normal ml-1">
-                            ({listing.totalBids} bids)
+                            ({listing.totalBids || 0} bids)
                           </span>
                         </p>
                         <p className="text-gray-400 text-xs mt-1">

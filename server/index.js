@@ -5,6 +5,7 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/database.js';
+import { initRedis } from './services/redisService.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -45,6 +46,9 @@ const io = new Server(server, {
 // Connect to database
 connectDB();
 
+// Initialize Redis for caching
+initRedis();
+
 // Middleware
 app.use(compression());
 app.use(cors({
@@ -64,8 +68,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cache-Control', 'Pragma'],
+  exposedHeaders: ['Content-Length'],
   preflightContinue: false,
   optionsSuccessStatus: 200
 }));
@@ -80,10 +84,17 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Cache control middleware for static responses
+// Cache control middleware - no caching for auction/bid data
 app.use((req, res, next) => {
   if (req.method === 'GET') {
-    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    // Disable caching for auction and bid endpoints (real-time data)
+    if (req.path.includes('/auctions') || req.path.includes('/bids')) {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minutes for other endpoints
+    }
   }
   next();
 });
@@ -124,6 +135,54 @@ io.on('connection', (socket) => {
   socket.on('leave_listing', (listingId) => {
     socket.leave(`listing_${listingId}`);
     console.log(`User ${socket.id} left listing ${listingId}`);
+  });
+
+  // Join user's personal room for complaint updates
+  socket.on('join_user_room', (userId) => {
+    socket.join(`user_${userId}`);
+    console.log(`User ${socket.id} joined personal room user_${userId}`);
+  });
+
+  // Leave user's personal room
+  socket.on('leave_user_room', (userId) => {
+    socket.leave(`user_${userId}`);
+    console.log(`User ${socket.id} left personal room user_${userId}`);
+  });
+
+  // Join admin complaints room for real-time complaint notifications
+  socket.on('join_admin_complaints', () => {
+    socket.join('admin_complaints');
+    console.log(`Admin ${socket.id} joined admin_complaints room`);
+  });
+
+  // Leave admin complaints room
+  socket.on('leave_admin_complaints', () => {
+    socket.leave('admin_complaints');
+    console.log(`Admin ${socket.id} left admin_complaints room`);
+  });
+
+  // Join phone room for real-time bid updates
+  socket.on('join_phone', (phoneId) => {
+    socket.join(`phone_${phoneId}`);
+    console.log(`User ${socket.id} joined phone room phone_${phoneId}`);
+  });
+
+  // Leave phone room
+  socket.on('leave_phone', (phoneId) => {
+    socket.leave(`phone_${phoneId}`);
+    console.log(`User ${socket.id} left phone room phone_${phoneId}`);
+  });
+
+  // Join marketplace room for real-time new listings
+  socket.on('join_marketplace', () => {
+    socket.join('marketplace');
+    console.log(`User ${socket.id} joined marketplace room`);
+  });
+
+  // Leave marketplace room
+  socket.on('leave_marketplace', () => {
+    socket.leave('marketplace');
+    console.log(`User ${socket.id} left marketplace room`);
   });
 
   socket.on('disconnect', () => {

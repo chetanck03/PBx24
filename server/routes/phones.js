@@ -8,13 +8,15 @@ import {
   getPurchasedPhones,
   updatePhone,
   verifyPhone,
-  deletePhone
+  deletePhone,
+  getMarketplacePhones
 } from '../controllers/phoneController.js';
 import { requireAuth, requireAdmin, requireSeller } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
-// Public routes
+// Public routes - marketplace optimized endpoint (single call for phones + auctions)
+router.get('/marketplace', getMarketplacePhones);
 router.get('/', getAllPhones);
 
 // Seller routes (must be before /:id to avoid conflicts)

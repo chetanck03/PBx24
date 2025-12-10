@@ -33,6 +33,13 @@ api.interceptors.request.use(
     }
     // Add retry count to config
     config.retryCount = config.retryCount || 0;
+    
+    // Add timestamp to auction/bid requests to prevent browser caching
+    if (config.url?.includes('/auctions') || config.url?.includes('/bids')) {
+      const separator = config.url.includes('?') ? '&' : '?';
+      config.url = `${config.url}${separator}_t=${Date.now()}`;
+    }
+    
     return config;
   },
   (error) => {
@@ -101,6 +108,7 @@ export const userAPI = {
 // Phone API
 export const phoneAPI = {
   getAllPhones: (params) => api.get('/phones', { params }),
+  getMarketplace: (params) => api.get('/phones/marketplace', { params }), // Optimized: phones + auctions in single call
   getPhoneById: (id) => api.get(`/phones/${id}`),
   getSellerPhones: () => api.get('/phones/seller/my-phones'),
   getSoldPhones: () => api.get('/phones/seller/sold'),

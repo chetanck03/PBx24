@@ -62,6 +62,11 @@ const reelSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Track unique viewers - one view per account
+  viewedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   likes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -78,6 +83,11 @@ const reelSchema = new mongoose.Schema({
 // Index for efficient queries
 reelSchema.index({ createdAt: -1 });
 reelSchema.index({ userId: 1, createdAt: -1 });
+
+// Virtual for unique views count (actual views = unique viewers)
+reelSchema.virtual('uniqueViews').get(function() {
+  return this.viewedBy?.length || 0;
+});
 
 // Virtual for likes count
 reelSchema.virtual('likesCount').get(function() {

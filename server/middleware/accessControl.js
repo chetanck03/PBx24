@@ -2,6 +2,35 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 /**
+ * Middleware for optional authentication (doesn't fail if no token)
+ * Sets req.userId and req.userRole if token is valid, otherwise continues without them
+ */
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      // No token, continue without authentication
+      return next();
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    
+    if (user && user.isActive && !user.isBanned) {
+      req.user = user;
+      req.userId = user._id.toString();
+      req.userRole = user.role;
+    }
+    
+    next();
+  } catch (error) {
+    // Invalid token, continue without authentication
+    next();
+  }
+};
+
+/**
  * Middleware to require authentication
  */
 export const requireAuth = async (req, res, next) => {
@@ -190,6 +219,7 @@ export const requireOwnership = (getOwnerIdFn) => {
 };
 
 export default {
+  optionalAuth,
   requireAuth,
   requireAdmin,
   requireSeller,

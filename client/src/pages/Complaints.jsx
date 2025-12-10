@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 import toast from 'react-hot-toast';
 import { 
   MessageSquare, Send, X, FileText, Mail, Tag, 
-  Paperclip, AlertTriangle, User
+  Paperclip, AlertTriangle, User, RefreshCw, Wifi, WifiOff
 } from 'lucide-react';
 import config from '../config/env.js';
+import socketService from '../services/socketService.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const API_URL = config.API_BASE_URL;
 
 const Complaints = () => {
+  const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
@@ -24,29 +28,65 @@ const Complaints = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Initialize socket connection and join user room
+  useEffect(() => {
+    const socket = socketService.connect();
+    
+    if (socket) {
+      socket.on('connect', () => {
+        setSocketConnected(true);
+        // Join user's personal room to receive complaint updates
+        if (user?._id) {
+          socketService.joinUserRoom(user._id);
+        }
+      });
+
+      socket.on('disconnect', () => {
+        setSocketConnected(false);
+      });
+
+      // Listen for complaint updates from admin
+      socketService.onComplaintUpdated((updatedComplaint) => {
+        console.log('Received complaint update:', updatedComplaint);
+        setComplaints(prev => 
+          prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c)
+        );
+        toast.success(`Your complaint "${updatedComplaint.subject}" has been updated to: ${updatedComplaint.status.replace('_', ' ')}`);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (user?._id) {
+        socketService.leaveUserRoom(user._id);
+      }
+      socketService.removeAllListeners('complaint_updated');
+    };
+  }, [user?._id]);
+
   useEffect(() => {
     loadComplaints();
   }, []);
 
-  const loadComplaints = async () => {
+  const loadComplaints = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log('Token:', token ? 'Present' : 'Missing');
-      console.log('API URL:', `${API_URL}/complaints/my-complaints`);
+      
+      if (!token) {
+        toast.error('Please login to view complaints');
+        setLoading(false);
+        return;
+      }
       
       const response = await axios.get(`${API_URL}/complaints/my-complaints`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Complaints response:', response.data);
-      console.log('Number of complaints received:', response.data.data?.length || 0);
-      console.log('Complaints data details:', response.data.data?.map(c => ({ id: c._id, subject: c.subject, status: c.status })));
+      console.log('Loaded complaints:', response.data.data?.length || 0);
       setComplaints(response.data.data || []);
-      console.log('Complaints state after setting:', response.data.data || []);
     } catch (error) {
       console.error('Error loading complaints:', error);
-      console.error('Error details:', error.response?.data);
       if (error.response?.status === 401) {
         toast.error('Please login again to view complaints');
       } else {
@@ -55,7 +95,7 @@ const Complaints = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,6 +113,10 @@ const Complaints = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Immediately add the new complaint to the list
+      if (response.data.data) {
+        setComplaints(prev => [response.data.data, ...prev]);
+      }
     
       toast.success('Complaint submitted successfully! Admin will review it soon.');
       setShowCreateModal(false);
@@ -84,9 +128,8 @@ const Complaints = () => {
         category: 'other',
         priority: 'medium'
       });
-      loadComplaints();
     } catch (error) {
-      
+      console.error('Error submitting complaint:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to submit complaint');
     } finally {
       setSubmitting(false);
@@ -111,16 +154,34 @@ const Complaints = () => {
         <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-2xl p-6 sm:p-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white">
-              My Complaints
-            </h1>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#c4ff0d] text-black rounded-lg hover:bg-[#d4ff3d] font-bold transition-all"
-            >
-              <span>+</span>
-              New Complaint
-            </button>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white">
+                My Complaints
+              </h1>
+              {/* Real-time connection indicator */}
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                socketConnected ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+              }`}>
+                {socketConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                {socketConnected ? 'Live' : 'Offline'}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadComplaints}
+                className="flex items-center gap-2 px-3 py-2.5 bg-[#1a1a1a] text-gray-300 rounded-lg hover:bg-[#2a2a2a] transition-all"
+                title="Refresh complaints"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#c4ff0d] text-black rounded-lg hover:bg-[#d4ff3d] font-bold transition-all"
+              >
+                <span>+</span>
+                New Complaint
+              </button>
+            </div>
           </div>
 
           {/* Stats Row */}

@@ -34,7 +34,10 @@ export const AuthProvider = ({ children }) => {
       if (storedUser) {
         try {
           const userData = JSON.parse(storedUser);
-          setUser(userData);
+          // Only use stored data if it has anonymousId (required for seller features)
+          if (userData.anonymousId) {
+            setUser(userData);
+          }
         } catch (e) {
           console.error('Error parsing stored user:', e);
         }

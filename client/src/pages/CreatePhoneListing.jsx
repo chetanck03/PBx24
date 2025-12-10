@@ -17,7 +17,6 @@ const CreatePhoneListing = () => {
     imei: '',
     condition: 'Excellent',
     description: '',
-    minBidPrice: '',
     auctionDuration: '7',
     location: '',
     state: '',
@@ -201,7 +200,7 @@ const CreatePhoneListing = () => {
       const phoneData = {
         ...formData,
         images: validImages,
-        minBidPrice: parseFloat(formData.minBidPrice),
+        minBidPrice: 1, // Bidding starts from ₹1 - buyers decide the price
         auctionStartTime: new Date().toISOString(),
         auctionEndTime: auctionEndTime.toISOString()
       };
@@ -386,21 +385,8 @@ const CreatePhoneListing = () => {
                   </div>
                 </div>
 
-                {/* Row 1: Minimum Bid Price and Auction Duration */}
+                {/* Auction Duration */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-gray-400 text-sm mb-2 block">Minimum Bid Price (₹)</label>
-                    <input
-                      type="number"
-                      name="minBidPrice"
-                      value={formData.minBidPrice}
-                      onChange={handleChange}
-                      placeholder="Enter minimum bid"
-                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white px-4 py-3 rounded-lg focus:border-[#c4ff0d] focus:outline-none placeholder-gray-600"
-                      required
-                    />
-                  </div>
-
                   <div>
                     <label className="text-white font-semibold mb-2 block">Auction Duration</label>
                     <select
@@ -416,6 +402,18 @@ const CreatePhoneListing = () => {
                       <option value="14">14 Days</option>
                       <option value="30">30 Days</option>
                     </select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <div className="bg-[#1a2a1a] border border-[#c4ff0d]/30 rounded-lg p-4 w-full">
+                      <div className="flex items-center gap-2 text-[#c4ff0d]">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-semibold text-sm">Starting price will be decided by the Bidders</span>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-1">Buyers will decide the price through competitive bidding</p>
+                    </div>
                   </div>
                 </div>
 

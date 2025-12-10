@@ -333,9 +333,9 @@ const UserProfile = () => {
                             {phone.storage} • {phone.condition}
                           </p>
                           <div className="flex items-center justify-between pt-4 border-t border-[#2a2a2a]">
-                            <span className="text-sm text-gray-500">Starting Bid</span>
+                            <span className="text-sm text-gray-500">Current Bid</span>
                             <span className="text-xl font-bold text-[#c4ff0d]">
-                              ₹{phone.minBidPrice.toLocaleString()}
+                              {phone.currentBid > 0 ? `₹${phone.currentBid.toLocaleString()}` : 'No bids yet'}
                             </span>
                           </div>
                         </div>

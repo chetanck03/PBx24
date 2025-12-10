@@ -142,9 +142,16 @@ export const getAllReels = async (req, res) => {
 
     const total = await Reel.countDocuments({ isActive: true });
 
+    // Map reels to include unique views count
+    const reelsData = reels.map(reel => {
+      const reelObj = reel.toObject();
+      reelObj.views = reel.viewedBy?.length || reel.views || 0; // Unique views
+      return reelObj;
+    });
+
     res.json({
       success: true,
-      data: reels,
+      data: reelsData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -176,9 +183,16 @@ export const getUserReels = async (req, res) => {
 
     const total = await Reel.countDocuments({ userId, isActive: true });
 
+    // Map reels to include unique views count
+    const reelsData = reels.map(reel => {
+      const reelObj = reel.toObject();
+      reelObj.views = reel.viewedBy?.length || reel.views || 0;
+      return reelObj;
+    });
+
     res.json({
       success: true,
-      data: reels,
+      data: reelsData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -210,13 +224,13 @@ export const getReelById = async (req, res) => {
       });
     }
 
-    // Increment view count
-    reel.views += 1;
-    await reel.save();
+    // Return reel with unique views count
+    const reelData = reel.toObject();
+    reelData.views = reel.viewedBy?.length || reel.views || 0;
 
     res.json({
       success: true,
-      data: reel
+      data: reelData
     });
   } catch (error) {
     console.error('Error fetching reel:', error);
@@ -227,10 +241,12 @@ export const getReelById = async (req, res) => {
   }
 };
 
-// Increment view count for a reel (called when reel is actually watched)
+// Increment view count for a reel - UNIQUE views per account
+// One user = one view, no matter how many times they watch
 export const incrementReelView = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?._id;
 
     const reel = await Reel.findById(id);
 
@@ -241,13 +257,35 @@ export const incrementReelView = async (req, res) => {
       });
     }
 
-    // Increment view count
-    reel.views = (reel.views || 0) + 1;
-    await reel.save();
+    // Initialize viewedBy array if it doesn't exist
+    if (!reel.viewedBy) {
+      reel.viewedBy = [];
+    }
 
+    let isNewView = false;
+
+    // Only count view if user is logged in and hasn't viewed before
+    if (userId) {
+      const hasViewed = reel.viewedBy.some(viewerId => viewerId.toString() === userId.toString());
+      
+      if (!hasViewed) {
+        // Add user to viewedBy array
+        reel.viewedBy.push(userId);
+        // Update views count to match unique viewers
+        reel.views = reel.viewedBy.length;
+        isNewView = true;
+        await reel.save();
+      }
+    }
+
+    // Return the unique views count (viewedBy length)
     res.json({
       success: true,
-      data: { views: reel.views }
+      data: { 
+        views: reel.viewedBy?.length || reel.views || 0,
+        isNewView,
+        uniqueViewers: reel.viewedBy?.length || 0
+      }
     });
   } catch (error) {
     console.error('Error incrementing view:', error);
@@ -318,9 +356,16 @@ export const getMyReels = async (req, res) => {
 
     const total = await Reel.countDocuments({ userId: req.user._id, isActive: true });
 
+    // Map reels to include unique views count
+    const reelsData = reels.map(reel => {
+      const reelObj = reel.toObject();
+      reelObj.views = reel.viewedBy?.length || reel.views || 0;
+      return reelObj;
+    });
+
     res.json({
       success: true,
-      data: reels,
+      data: reelsData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -601,7 +646,8 @@ export const getUserReelStats = async (req, res) => {
 
     const stats = {
       totalReels: reels.length,
-      totalViews: reels.reduce((sum, reel) => sum + (reel.views || 0), 0),
+      // Use unique viewers count (viewedBy length) for accurate view count
+      totalViews: reels.reduce((sum, reel) => sum + (reel.viewedBy?.length || reel.views || 0), 0),
       totalLikes: reels.reduce((sum, reel) => sum + (reel.likes?.length || 0), 0),
       totalComments: reels.reduce((sum, reel) => sum + (reel.comments?.length || 0), 0),
       reels: reels.map(reel => ({
@@ -610,7 +656,7 @@ export const getUserReelStats = async (req, res) => {
         thumbnailUrl: reel.contentType === 'images' ? reel.images?.[0]?.url : reel.thumbnailUrl,
         videoUrl: reel.videoUrl,
         images: reel.images,
-        views: reel.views || 0,
+        views: reel.viewedBy?.length || reel.views || 0, // Unique views
         likes: reel.likes?.length || 0,
         comments: reel.comments?.length || 0,
         createdAt: reel.createdAt

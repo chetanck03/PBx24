@@ -45,10 +45,12 @@ export const googleAuth = async (req, res) => {
         token,
         user: {
           id: user._id,
+          _id: user._id,
           email: user.email,
           name: user.name,
           avatar: user.avatar,
-          role: user.role
+          role: user.role,
+          anonymousId: user.anonymousId
         }
       }
     });
@@ -71,10 +73,12 @@ export const getProfile = async (req, res) => {
       data: {
         user: {
           id: user._id,
+          _id: user._id,
           email: user.email,
           name: user.name,
           avatar: user.avatar,
-          role: user.role
+          role: user.role,
+          anonymousId: user.anonymousId
         }
       }
     });

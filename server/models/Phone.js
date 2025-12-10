@@ -79,8 +79,9 @@ const phoneSchema = new mongoose.Schema({
   },
   minBidPrice: {
     type: Number,
-    required: true,
-    min: 0
+    required: false,
+    default: 1, // Bidding starts from ₹1 - buyers decide the price
+    min: 1
   },
   
   // Verification

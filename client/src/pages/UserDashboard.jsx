@@ -333,8 +333,10 @@ const UserDashboard = () => {
                           <h3 className="font-bold text-base sm:text-lg text-white mb-2">{phone.brand} {phone.model}</h3>
                           <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">{phone.storage} - {phone.condition}</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs sm:text-sm text-gray-500">Min Bid</span>
-                            <span className="text-lg sm:text-xl font-bold text-[#c4ff0d]">₹{phone.minBidPrice?.toLocaleString()}</span>
+                            <span className="text-xs sm:text-sm text-gray-500">Current Bid</span>
+                            <span className="text-lg sm:text-xl font-bold text-[#c4ff0d]">
+                              {phone.currentBid > 0 ? `₹${phone.currentBid?.toLocaleString()}` : 'No bids yet'}
+                            </span>
                           </div>
                         </div>
                       </div>
