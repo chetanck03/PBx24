@@ -90,7 +90,8 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  googleLogin: (tokenId) => api.post('/auth/google', { tokenId }),
+  googleLogin: (googleData) => api.post('/auth/google', googleData),
+  googleRegister: (googleData) => api.post('/auth/google/register', googleData),
   logout: () => api.post('/auth/logout'),
   getProfile: () => api.get('/auth/me')
 };

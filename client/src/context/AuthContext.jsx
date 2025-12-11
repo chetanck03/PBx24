@@ -87,7 +87,55 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login failed:', error);
-      return { success: false, error: error.response?.data?.error?.message || 'Login failed' };
+      const errorData = error.response?.data?.error;
+      
+      if (errorData?.code === 'ACCOUNT_NOT_FOUND') {
+        return { 
+          success: false, 
+          error: errorData.message,
+          requiresRegistration: true,
+          userData: errorData.userData
+        };
+      }
+      
+      if (errorData?.code === 'KYC_REQUIRED') {
+        return { 
+          success: false, 
+          error: errorData.message,
+          requiresKyc: true,
+          userData: errorData.userData
+        };
+      }
+      
+      return { success: false, error: errorData?.message || 'Login failed' };
+    }
+  };
+
+  const registerWithGoogle = async (googleData) => {
+    try {
+      const response = await api.post('/auth/google/register', {
+        googleId: googleData.sub,
+        email: googleData.email,
+        name: googleData.name,
+        avatar: googleData.picture,
+        governmentIdProof: googleData.governmentIdProof,
+        governmentIdType: googleData.governmentIdType
+      });
+
+      if (response.data.success) {
+        const { token, user } = response.data.data;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
+        return { 
+          success: true, 
+          requiresKyc: response.data.data.requiresKyc,
+          message: response.data.data.message
+        };
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return { success: false, error: error.response?.data?.error?.message || 'Registration failed' };
     }
   };
 
@@ -106,6 +154,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    registerWithGoogle,
     logout,
     updateUser,
     checkAuth,

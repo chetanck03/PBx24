@@ -22,33 +22,64 @@ export const sendOTPEmail = async (email, otp, name = 'User') => {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-          .otp-box { background: white; border: 2px dashed #667eea; padding: 20px; text-align: center; margin: 20px 0; border-radius: 10px; }
-          .otp-code { font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px; }
-          .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
+          .header { background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: #c4ff0d; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
+          .content { background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+          .otp-container { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border: 3px solid #c4ff0d; padding: 30px; text-align: center; margin: 30px 0; border-radius: 16px; position: relative; }
+          .otp-container::before { content: '🔐'; font-size: 24px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; }
+          .otp-code { font-size: 42px; font-weight: 900; color: #1a1a1a; letter-spacing: 8px; font-family: 'Courier New', monospace; margin: 10px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+          .otp-label { font-size: 14px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+          .highlight-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 20px; margin: 25px 0; border-radius: 8px; }
+          .security-note { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 20px; margin: 25px 0; border-radius: 8px; }
+          .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 12px; }
+          .brand-name { color: #c4ff0d; font-weight: bold; }
+          .warning-text { color: #dc2626; font-weight: 600; }
+          .success-text { color: #16a34a; font-weight: 600; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>🔐 Verification Code</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">PhoneBid Marketplace</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Secure Verification Code</p>
           </div>
           <div class="content">
-            <p>Hello ${name},</p>
-            <p>Your verification code for PhoneBid Marketplace is:</p>
-            <div class="otp-box">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; color: #475569;">We received a request to verify your account. Please use the verification code below to complete your authentication:</p>
+            
+            <div class="otp-container">
+              <div class="otp-label">Your Verification Code</div>
               <div class="otp-code">${otp}</div>
+              <p style="margin: 15px 0 0 0; font-size: 14px; color: #64748b;">Enter this code to continue</p>
             </div>
-            <p><strong>This code will expire in 10 minutes.</strong></p>
-            <p>If you didn't request this code, please ignore this email.</p>
-            <p>Best regards,<br>PhoneBid Team</p>
+            
+            <div class="highlight-box">
+              <p style="margin: 0; font-size: 14px;"><strong>⏰ Important:</strong> This verification code will <span class="warning-text">expire in 10 minutes</span> for your security.</p>
+            </div>
+            
+            <div class="security-note">
+              <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1e293b;">🛡️ Security Information</h3>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #475569;">
+                <li>Never share this code with anyone</li>
+                <li>PhoneBid staff will never ask for your verification code</li>
+                <li>If you didn't request this code, please ignore this email</li>
+                <li>For security concerns, contact our support team immediately</li>
+              </ul>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">Thank you for choosing <span class="brand-name">PhoneBid Marketplace</span> - where secure phone trading happens!</p>
+            
+            <p style="margin-top: 25px; font-size: 14px; color: #64748b;">
+              Best regards,<br>
+              <strong>The PhoneBid Team</strong>
+            </p>
           </div>
           <div class="footer">
-            <p>© ${new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.</p>
-            <p>This is an automated email. Please do not reply.</p>
+            <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.</p>
+            <p style="margin: 0;">This is an automated security email. Please do not reply to this message.</p>
+            <p style="margin: 10px 0 0 0; font-size: 11px;">If you have questions, visit our support center or contact us through the platform.</p>
           </div>
         </div>
       </body>

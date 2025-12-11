@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Eye, EyeOff, Smartphone, Upload, X } from 'lucide-react';
@@ -6,8 +6,10 @@ import config from '../config/env.js';
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { updateUser, registerWithGoogle } = useAuth();
   const [step, setStep] = useState(1);
+  const [isGoogleSignup, setIsGoogleSignup] = useState(false);
+  const [googleData, setGoogleData] = useState(null);
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
@@ -25,6 +27,27 @@ const SignUp = () => {
   const [resendTimer, setResendTimer] = useState(0);
   const [idProofPreview, setIdProofPreview] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Check for Google signup data on component mount
+  useEffect(() => {
+    const storedGoogleData = localStorage.getItem('googleSignupData');
+    if (storedGoogleData) {
+      try {
+        const parsedData = JSON.parse(storedGoogleData);
+        setGoogleData(parsedData);
+        setIsGoogleSignup(true);
+        setFormData(prev => ({
+          ...prev,
+          name: parsedData.name || '',
+          email: parsedData.email || ''
+        }));
+        // Clear the stored data
+        localStorage.removeItem('googleSignupData');
+      } catch (error) {
+        console.error('Error parsing Google signup data:', error);
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,13 +99,16 @@ const SignUp = () => {
       setError('Email is required');
       return false;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
+    // Skip password validation for Google signup
+    if (!isGoogleSignup) {
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters');
+        return false;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
     }
     if (!formData.governmentIdProof) {
       setError('Government ID proof is required');
@@ -107,20 +133,40 @@ const SignUp = () => {
     setError('');
 
     try {
-      const response = await fetch(`${config.API_BASE_URL}/v2/auth/signup/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, name: formData.name })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setStep(2);
-        setSuccess('OTP sent to your email!');
-        startResendTimer();
+      if (isGoogleSignup && googleData) {
+        // Handle Google registration directly
+        const result = await registerWithGoogle({
+          ...googleData,
+          governmentIdProof: formData.governmentIdProof,
+          governmentIdType: formData.governmentIdType
+        });
+        
+        if (result.success) {
+          setSuccess('Account created successfully! Please complete your KYC verification.');
+          setTimeout(() => {
+            // Redirect to KYC page or dashboard based on requirements
+            navigate('/dashboard');
+          }, 1500);
+        } else {
+          setError(result.error);
+        }
       } else {
-        setError(data.error.message || 'Failed to send OTP');
+        // Handle regular email signup
+        const response = await fetch(`${config.API_BASE_URL}/v2/auth/signup/send-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email, name: formData.name })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setStep(2);
+          setSuccess('OTP sent to your email!');
+          startResendTimer();
+        } else {
+          setError(data.error.message || 'Failed to send OTP');
+        }
       }
     } catch (error) {
       setError('Network error. Please try again.');
@@ -230,14 +276,27 @@ const SignUp = () => {
           {/* Title */}
           <div className="mb-3">
             <h2 className="text-xl font-bold text-white mb-1">
-              {step === 1 ? 'Create your account' : 'Verify your email'}
+              {step === 1 
+                ? (isGoogleSignup ? 'Complete your Google account setup' : 'Create your account')
+                : 'Verify your email'
+              }
             </h2>
             <p className="text-gray-400 text-xs">
               {step === 1 
-                ? 'Join PhoneBid and start trading anonymously'
+                ? (isGoogleSignup 
+                    ? 'Complete KYC verification to finish your Google account setup'
+                    : 'Join PhoneBid and start trading anonymously'
+                  )
                 : `We sent a 6-digit code to ${formData.email}`
               }
             </p>
+            {isGoogleSignup && (
+              <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-xs text-blue-400">
+                  ✓ Signing up with Google account: {formData.email}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Error Message */}
@@ -268,7 +327,8 @@ const SignUp = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm"
+                    disabled={isGoogleSignup}
+                    className={`w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm ${isGoogleSignup ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="Enter your full name"
                     required
                   />
@@ -284,61 +344,66 @@ const SignUp = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm"
+                    disabled={isGoogleSignup}
+                    className={`w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition text-sm ${isGoogleSignup ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="Enter your email"
                     required
                   />
                 </div>
 
-                {/* Password */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
-                      placeholder="Create a password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                {/* Password - Only show for regular signup */}
+                {!isGoogleSignup && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
+                          placeholder="Create a password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Confirm Password */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
-                      placeholder="Confirm your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                        Confirm Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
+                          placeholder="Confirm your password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* ID Type and Upload Section */}
@@ -430,10 +495,10 @@ const SignUp = () => {
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
-                    Sending OTP...
+                    {isGoogleSignup ? 'Creating Account...' : 'Sending OTP...'}
                   </div>
                 ) : (
-                  'Continue'
+                  isGoogleSignup ? 'Create Account' : 'Continue'
                 )}
               </button>
 

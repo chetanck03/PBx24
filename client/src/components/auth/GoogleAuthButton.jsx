@@ -9,7 +9,7 @@ const GoogleAuthButton = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const [buttonRendered, setButtonRendered] = useState(false);
-  const { login } = useAuth();
+  const { login, registerWithGoogle } = useAuth();
   const navigate = useNavigate();
   const buttonRef = useRef(null);
 
@@ -101,20 +101,54 @@ const GoogleAuthButton = () => {
         picture: payload.picture
       };
 
-      console.log('Google OAuth successful, logging in user:', googleData.email);
+      console.log('Google OAuth successful, attempting login for:', googleData.email);
       const result = await login(googleData);
       
       if (result.success) {
+        toast.success('Login successful!');
         navigate('/dashboard');
+      } else if (result.requiresRegistration) {
+        // Account doesn't exist, redirect to signup page with Google data
+        toast.error('Account not found. Redirecting to signup...');
+        // Store Google data temporarily for signup page
+        localStorage.setItem('googleSignupData', JSON.stringify(googleData));
+        navigate('/auth/signup');
+      } else if (result.requiresKyc) {
+        // Account exists but KYC not completed
+        toast.error(result.error);
+        // Store user data temporarily and redirect to KYC
+        localStorage.setItem('pendingKycUser', JSON.stringify(result.userData));
+        navigate('/auth/signup');
       } else {
         console.error('Login failed:', result.error);
-        toast.error('Login failed: ' + result.error);
+        toast.error(result.error);
       }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleRegistration = async (googleData) => {
+    try {
+      const result = await registerWithGoogle(googleData);
+      
+      if (result.success) {
+        toast.success(result.message || 'Account created successfully!');
+        if (result.requiresKyc) {
+          toast.info('Please complete your KYC verification to access all features.');
+          navigate('/auth/signup');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error('Registration failed. Please try again.');
     }
   };
 
