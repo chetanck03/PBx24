@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
             <Shield className="w-10 h-10 text-black" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Privacy Policy</h1>
-          <p className="text-gray-400">Last updated: December 2024</p>
+          <p className="text-gray-400">Last updated: December 2025</p>
         </div>
 
         <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-8 space-y-8">

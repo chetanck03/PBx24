@@ -26,7 +26,7 @@ const Blog = () => {
           content: 'Selling your used phone can be tricky. Here are some tips to maximize your selling price on PhoneBid:\n\n1. Take high-quality photos from multiple angles\n2. Be honest about the condition\n3. Include all accessories\n4. Set a competitive starting bid\n5. Write a detailed description\n\nRemember, buyers appreciate transparency. The more information you provide, the more confident they\'ll be in bidding higher.',
           author: 'PhoneBid Team',
           category: 'Selling Tips',
-          createdAt: new Date('2024-12-01').toISOString(),
+          createdAt: new Date().toISOString(),
           readTime: '3 min read'
         },
         {
@@ -35,16 +35,16 @@ const Blog = () => {
           content: 'PhoneBid\'s anonymous bidding system protects both buyers and sellers. Here\'s how it works:\n\nWhen you create an account, you\'re assigned a unique Anonymous ID. This ID is used for all your marketplace activities. Sellers see bids from anonymous bidders, and buyers see phones from anonymous sellers.\n\nThis system prevents:\n- Price discrimination\n- Personal targeting\n- Privacy breaches\n\nYour real identity is only revealed to admin for verification purposes.',
           author: 'PhoneBid Team',
           category: 'Platform Guide',
-          createdAt: new Date('2024-11-28').toISOString(),
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
           readTime: '4 min read'
         },
         {
           id: 3,
-          title: 'Top 5 Phones to Buy in 2024',
+          title: `Top 5 Phones to Buy in ${new Date().getFullYear()}`,
           content: 'Looking for the best deals on PhoneBid? Here are the most popular phones this year:\n\n1. iPhone 15 Pro - Excellent camera and performance\n2. Samsung Galaxy S24 - Great display and AI features\n3. OnePlus 12 - Best value flagship\n4. Google Pixel 8 - Pure Android experience\n5. iPhone 14 - Still a solid choice at lower prices\n\nCheck our marketplace for the best deals on these models!',
           author: 'Tech Reviewer',
           category: 'Buying Guide',
-          createdAt: new Date('2024-11-25').toISOString(),
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
           readTime: '2 min read'
         }
       ];

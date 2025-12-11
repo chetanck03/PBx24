@@ -231,11 +231,27 @@ const AdminDashboard = () => {
 
   const handleVerifyPhone = useCallback(async (phoneId, status) => {
     try {
-      await adminAPI.verifyPhone(phoneId, { verificationStatus: status });
-      setPhones(prev => prev.map(p => p._id === phoneId ? { ...p, verificationStatus: status } : p));
+      const response = await adminAPI.verifyPhone(phoneId, { verificationStatus: status });
+      console.log('Verify phone response:', response);
+      
+      // Update local state immediately for better UX
+      setPhones(prev => prev.map(p => p._id === phoneId ? { 
+        ...p, 
+        verificationStatus: status,
+        status: status === 'approved' ? 'live' : 'rejected'
+      } : p));
+      
       toast.success(`Phone ${status} successfully!`);
-    } catch (error) { toast.error('Failed to verify phone'); }
-  }, []);
+      
+      // Reload data to ensure consistency with database
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await loadDashboardData();
+      
+    } catch (error) { 
+      console.error('Error verifying phone:', error);
+      toast.error(`Failed to verify phone: ${error.response?.data?.error?.message || error.message}`); 
+    }
+  }, [loadDashboardData]);
 
   const handleReviewKYC = useCallback(async (userId, status) => {
     try {

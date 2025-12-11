@@ -17,18 +17,52 @@ export const CACHE_TTL = {
  * Initialize Redis connection
  */
 export const initRedis = () => {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  // Check for Redis configuration
+  const redisUrl = process.env.REDIS_URL;
+  const redisHost = process.env.REDIS_HOST;
+  const redisPort = process.env.REDIS_PORT;
+  const redisUsername = process.env.REDIS_USERNAME;
+  const redisPassword = process.env.REDIS_PASSWORD;
+  
+  // Skip Redis initialization if no configuration is provided
+  if (!redisUrl && !redisHost) {
+    console.log('⚠️ Redis not configured - running without cache');
+    return null;
+  }
   
   try {
-    redis = new Redis(redisUrl, {
+    let redisConfig;
+    
+    if (redisUrl) {
+      // Use Redis URL
+      redisConfig = redisUrl;
+    } else {
+      // Use individual Redis parameters
+      redisConfig = {
+        host: redisHost,
+        port: parseInt(redisPort) || 6379,
+        username: redisUsername || 'default',
+        password: redisPassword,
+      };
+    }
+    
+    redis = new Redis(redisConfig, {
       maxRetriesPerRequest: 3,
       retryDelayOnFailover: 100,
       enableReadyCheck: true,
       lazyConnect: true,
+      connectTimeout: 10000,
+      commandTimeout: 5000,
+      family: 4, // Force IPv4
     });
 
     redis.on('connect', () => {
       console.log('✅ Redis connected successfully');
+      isConnected = true;
+    });
+
+    redis.on('ready', () => {
+      console.log('✅ Redis ready for commands');
       isConnected = true;
     });
 
@@ -38,18 +72,23 @@ export const initRedis = () => {
     });
 
     redis.on('close', () => {
-      console.log('Redis connection closed');
+      console.log('⚠️ Redis connection closed - running without cache');
       isConnected = false;
     });
 
-    // Connect
+    redis.on('reconnecting', () => {
+      console.log('🔄 Redis reconnecting...');
+    });
+
+    // Connect with timeout
     redis.connect().catch(err => {
-      console.error('Redis initial connection failed:', err.message);
+      console.error('⚠️ Redis connection failed - running without cache:', err.message);
+      isConnected = false;
     });
 
     return redis;
   } catch (error) {
-    console.error('Failed to initialize Redis:', error.message);
+    console.error('⚠️ Failed to initialize Redis - running without cache:', error.message);
     return null;
   }
 };

@@ -106,7 +106,7 @@ const Footer = () => {
         <div className="border-t border-[#1a1a1a] pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              &copy; 2024 PhoneBid Marketplace. All rights reserved.
+              &copy; {new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-500">
               <Link to="/privacy-policy" className="hover:text-[#c4ff0d] transition">Privacy</Link>

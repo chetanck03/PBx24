@@ -47,7 +47,7 @@ export const sendOTPEmail = async (email, otp, name = 'User') => {
             <p>Best regards,<br>PhoneBid Team</p>
           </div>
           <div class="footer">
-            <p>© 2024 PhoneBid Marketplace. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.</p>
             <p>This is an automated email. Please do not reply.</p>
           </div>
         </div>
@@ -248,7 +248,7 @@ export const sendBidAcceptanceEmail = async (email, name, phoneDetails, bidAmoun
             <p>Best regards,<br><strong>PhoneBid Team</strong></p>
           </div>
           <div class="footer">
-            <p>© 2024 PhoneBid Marketplace. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.</p>
             <p>This is an automated email. For support, please contact admin through the platform.</p>
           </div>
         </div>
@@ -342,7 +342,7 @@ export const sendBidAcceptanceEmailToSeller = async (email, name, phoneDetails, 
             <p>Best regards,<br><strong>PhoneBid Team</strong></p>
           </div>
           <div class="footer">
-            <p>2024 PhoneBid Marketplace. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} PhoneBid Marketplace. All rights reserved.</p>
             <p>This is an automated email. For support, please contact admin through the platform.</p>
           </div>
         </div>
