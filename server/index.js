@@ -32,6 +32,8 @@ const server = createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "https://p-bx24.vercel.app",
+  "https://phonebid.store",
+  "https://www.phonebid.store",
   process.env.CLIENT_URL
 ].filter(Boolean);
 

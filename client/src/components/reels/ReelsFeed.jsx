@@ -125,7 +125,7 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   const { isAuthenticated, user } = useAuth();
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Changed to false - audio on by default
   const [showControls, setShowControls] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(reel.likes?.length || 0);
@@ -134,6 +134,10 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   const [likeLoading, setLikeLoading] = useState(false);
   const [viewCount, setViewCount] = useState(reel.views || 0);
   const viewTrackedRef = useRef(false);
+  
+  // For double-tap like functionality
+  const [lastTap, setLastTap] = useState(0);
+  const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   
   // For image carousel
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -179,15 +183,42 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
     const video = videoRef.current;
     if (!video) return;
 
+    // Set initial audio state
+    video.muted = isMuted;
+
     if (isActive) {
-      video.play().catch(() => {});
+      video.play().catch(() => {
+        // If autoplay fails, try with muted first
+        video.muted = true;
+        setIsMuted(true);
+        video.play().catch(() => {});
+      });
       setIsPlaying(true);
     } else {
       video.pause();
       video.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [isActive, isImageReel]);
+  }, [isActive, isImageReel, isMuted]);
+
+  const handleVideoClick = (e) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTap < DOUBLE_TAP_DELAY) {
+      // Double tap - like the reel
+      e.stopPropagation();
+      handleDoubleTapLike();
+    } else {
+      // Single tap - toggle play/pause
+      setLastTap(now);
+      setTimeout(() => {
+        if (Date.now() - lastTap >= DOUBLE_TAP_DELAY) {
+          togglePlay();
+        }
+      }, DOUBLE_TAP_DELAY);
+    }
+  };
 
   const togglePlay = () => {
     if (isImageReel) return; // No play/pause for images
@@ -198,9 +229,77 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
     if (isPlaying) {
       video.pause();
     } else {
-      video.play();
+      video.play().catch(() => {
+        // If play fails, try with muted
+        video.muted = true;
+        setIsMuted(true);
+        video.play().catch(() => {});
+      });
     }
     setIsPlaying(!isPlaying);
+  };
+
+  const handleDoubleTapLike = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to like reels');
+      return;
+    }
+
+    // Show like animation
+    setShowLikeAnimation(true);
+    setTimeout(() => setShowLikeAnimation(false), 1000);
+
+    // If not already liked, like it
+    if (!liked) {
+      try {
+        const response = await reelAPI.toggleLike(reel._id);
+        setLiked(response.data.data.liked);
+        setLikesCount(response.data.data.likesCount);
+        onUpdate({ likes: response.data.data.liked ? [...(reel.likes || []), user._id] : (reel.likes || []).filter(id => id !== user._id) });
+      } catch (err) {
+        toast.error('Failed to like reel');
+      }
+    }
+  };
+
+  // Handle double-tap for like
+  const handleDoubleTap = async (e) => {
+    e.stopPropagation();
+    
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    
+    if (tapLength < 300 && tapLength > 0) {
+      // Double tap detected
+      if (!isAuthenticated) {
+        toast.error('Please login to like reels');
+        return;
+      }
+
+      // Show like animation
+      setShowLikeAnimation(true);
+      setTimeout(() => setShowLikeAnimation(false), 1000);
+
+      // Like the reel if not already liked
+      if (!liked && !likeLoading) {
+        try {
+          setLikeLoading(true);
+          const response = await reelAPI.toggleLike(reel._id);
+          setLiked(response.data.data.liked);
+          setLikesCount(response.data.data.likesCount);
+          onUpdate({ likes: response.data.data.liked ? [...(reel.likes || []), user._id] : (reel.likes || []).filter(id => id !== user._id) });
+        } catch (err) {
+          toast.error('Failed to like reel');
+        } finally {
+          setLikeLoading(false);
+        }
+      }
+    } else {
+      // Single tap - toggle play/pause
+      togglePlay();
+    }
+    
+    setLastTap(currentTime);
   };
 
   const toggleMute = (e) => {
@@ -261,7 +360,7 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
   return (
     <div 
       className="h-screen w-full snap-start relative flex items-center justify-center bg-black"
-      onClick={togglePlay}
+      onClick={handleVideoClick}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -327,6 +426,12 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
             playsInline
             preload="metadata"
             poster={reel.thumbnailUrl}
+            onLoadedData={() => {
+              // Ensure audio state is set correctly when video loads
+              if (videoRef.current) {
+                videoRef.current.muted = isMuted;
+              }
+            }}
           />
 
           {/* Play/Pause overlay */}
@@ -342,22 +447,47 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
             </div>
           )}
 
-          {/* Mute button */}
-          <button
-            onClick={toggleMute}
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition"
-          >
-            {isMuted ? (
-              <VolumeX className="w-5 h-5 text-white" />
-            ) : (
-              <Volume2 className="w-5 h-5 text-white" />
+          {/* Audio controls - more visible */}
+          <div className="absolute top-20 right-4 flex flex-col gap-2">
+            <button
+              onClick={toggleMute}
+              className={`p-3 rounded-full transition border shadow-lg ${
+                isMuted 
+                  ? 'bg-red-500/80 hover:bg-red-500 border-red-400/50' 
+                  : 'bg-[#c4ff0d]/90 hover:bg-[#c4ff0d] border-[#c4ff0d]/50'
+              }`}
+            >
+              {isMuted ? (
+                <VolumeX className="w-6 h-6 text-white" />
+              ) : (
+                <Volume2 className="w-6 h-6 text-black" />
+              )}
+            </button>
+            {/* Audio indicator */}
+            {!isMuted && isPlaying && (
+              <div className="flex justify-center">
+                <div className="flex gap-1">
+                  <div className="w-1 h-4 bg-[#c4ff0d] rounded-full animate-pulse"></div>
+                  <div className="w-1 h-6 bg-[#c4ff0d] rounded-full animate-pulse" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-1 h-3 bg-[#c4ff0d] rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </>
       )}
 
+      {/* Double-tap like animation */}
+      {showLikeAnimation && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="animate-ping">
+            <Heart className="w-20 h-20 text-red-500 fill-red-500" />
+          </div>
+        </div>
+      )}
+
       {/* Right side actions */}
-      <div className="absolute right-4 bottom-24 flex flex-col gap-4">
+      <div className="absolute right-4 bottom-32 flex flex-col gap-4">
         {/* Like button */}
         <button 
           onClick={handleLike}
@@ -400,31 +530,43 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
         </div>
       </div>
 
+      {/* Bottom gradient overlay for better text visibility */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none"></div>
+      
       {/* Bottom info */}
-      <div className="absolute bottom-4 left-4 right-20 text-white">
+      <div className="absolute bottom-16 left-4 right-20 text-white z-10">
         <button 
           onClick={handleUserClick}
-          className="flex items-center gap-2 mb-2 hover:opacity-80 transition cursor-pointer"
+          className="flex items-center gap-3 mb-3 hover:opacity-80 transition cursor-pointer bg-black/30 backdrop-blur-sm rounded-full px-3 py-2"
         >
           {reel.userId?.avatar ? (
             <img 
               src={reel.userId.avatar} 
               alt={reel.userId?.name || 'User'} 
-              className="w-10 h-10 rounded-full object-cover border-2 border-[#c4ff0d]"
+              className="w-12 h-12 rounded-full object-cover border-2 border-[#c4ff0d]"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-[#c4ff0d] flex items-center justify-center">
-              <span className="text-black font-bold">
+            <div className="w-12 h-12 rounded-full bg-[#c4ff0d] flex items-center justify-center">
+              <span className="text-black font-bold text-lg">
                 {reel.userId?.name?.charAt(0) || 'U'}
               </span>
             </div>
           )}
-          <span className="font-semibold hover:underline">
-            @{reel.userId?.anonymousId || 'Anonymous'}
-          </span>
+          <div className="text-left">
+            <span className="font-semibold hover:underline text-white text-lg block">
+              @{reel.userId?.anonymousId || 'Anonymous'}
+            </span>
+            {reel.userId?.name && (
+              <span className="text-gray-300 text-sm">
+                {reel.userId.name}
+              </span>
+            )}
+          </div>
         </button>
         {reel.description && (
-          <p className="text-sm text-gray-200 line-clamp-2">{reel.description}</p>
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 mt-2">
+            <p className="text-sm text-gray-200 line-clamp-3 leading-relaxed">{reel.description}</p>
+          </div>
         )}
       </div>
 
