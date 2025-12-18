@@ -4,6 +4,10 @@ import Redis from 'ioredis';
 let redis = null;
 let isConnected = false;
 
+// In-memory cache fallback when Redis is unavailable
+const memoryCache = new Map();
+const memoryCacheExpiry = new Map();
+
 // Cache TTL constants (in seconds)
 export const CACHE_TTL = {
   AUCTION: 30,        // Auction data - 30 seconds
@@ -11,7 +15,19 @@ export const CACHE_TTL = {
   BIDS: 10,           // Bids list - 10 seconds (frequently updated)
   MARKETPLACE: 30,    // Marketplace listings - 30 seconds
   USER_PROFILE: 120,  // User profile - 2 minutes
+  STATS: 30,          // Platform statistics - 30 seconds
 };
+
+// Clean expired memory cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiry] of memoryCacheExpiry.entries()) {
+    if (now > expiry) {
+      memoryCache.delete(key);
+      memoryCacheExpiry.delete(key);
+    }
+  }
+}, 10000); // Clean every 10 seconds
 
 /**
  * Initialize Redis connection
@@ -99,66 +115,93 @@ export const initRedis = () => {
 export const isRedisAvailable = () => isConnected && redis !== null;
 
 /**
- * Get cached data
+ * Get cached data - with memory fallback
  */
 export const getCache = async (key) => {
-  if (!isRedisAvailable()) return null;
+  // Try Redis first
+  if (isRedisAvailable()) {
+    try {
+      const data = await redis.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      // Fall through to memory cache
+    }
+  }
   
-  try {
-    const data = await redis.get(key);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Redis get error:', error.message);
+  // Fallback to memory cache
+  const expiry = memoryCacheExpiry.get(key);
+  if (expiry && Date.now() > expiry) {
+    memoryCache.delete(key);
+    memoryCacheExpiry.delete(key);
     return null;
   }
+  return memoryCache.get(key) || null;
 };
 
 /**
- * Set cached data with TTL
+ * Set cached data with TTL - with memory fallback
  */
 export const setCache = async (key, data, ttl = 60) => {
-  if (!isRedisAvailable()) return false;
-  
-  try {
-    await redis.setex(key, ttl, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error('Redis set error:', error.message);
-    return false;
+  // Try Redis first
+  if (isRedisAvailable()) {
+    try {
+      await redis.setex(key, ttl, JSON.stringify(data));
+      return true;
+    } catch (error) {
+      // Fall through to memory cache
+    }
   }
+  
+  // Fallback to memory cache
+  memoryCache.set(key, data);
+  memoryCacheExpiry.set(key, Date.now() + (ttl * 1000));
+  return true;
 };
 
 /**
- * Delete cached data
+ * Delete cached data - with memory fallback
  */
 export const deleteCache = async (key) => {
-  if (!isRedisAvailable()) return false;
+  // Delete from memory cache
+  memoryCache.delete(key);
+  memoryCacheExpiry.delete(key);
   
-  try {
-    await redis.del(key);
-    return true;
-  } catch (error) {
-    console.error('Redis delete error:', error.message);
-    return false;
+  // Try Redis
+  if (isRedisAvailable()) {
+    try {
+      await redis.del(key);
+    } catch (error) {
+      // Ignore Redis errors
+    }
   }
+  return true;
 };
 
 /**
- * Delete multiple keys by pattern
+ * Delete multiple keys by pattern - with memory fallback
  */
 export const deleteCachePattern = async (pattern) => {
-  if (!isRedisAvailable()) return false;
-  
-  try {
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
+  // Delete from memory cache (simple pattern matching)
+  const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+  for (const key of memoryCache.keys()) {
+    if (regex.test(key)) {
+      memoryCache.delete(key);
+      memoryCacheExpiry.delete(key);
     }
-    return true;
-  } catch (error) {
-    console.error('Redis delete pattern error:', error.message);
-    return false;
   }
+  
+  // Try Redis
+  if (isRedisAvailable()) {
+    try {
+      const keys = await redis.keys(pattern);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch (error) {
+      // Ignore Redis errors
+    }
+  }
+  return true;
 };
 
 // Cache key generators

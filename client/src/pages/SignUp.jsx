@@ -319,12 +319,14 @@ const SignUp = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Full Name */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">
+                  <label htmlFor="signup-name" className="block text-xs font-medium text-gray-300 mb-1">
                     Full Name
                   </label>
                   <input
+                    id="signup-name"
                     type="text"
                     name="name"
+                    autoComplete="name"
                     value={formData.name}
                     onChange={handleChange}
                     disabled={isGoogleSignup}
@@ -336,12 +338,14 @@ const SignUp = () => {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-1">
+                  <label htmlFor="signup-email" className="block text-xs font-medium text-gray-300 mb-1">
                     Email address
                   </label>
                   <input
+                    id="signup-email"
                     type="email"
                     name="email"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
                     disabled={isGoogleSignup}
@@ -355,13 +359,15 @@ const SignUp = () => {
                 {!isGoogleSignup && (
                   <>
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label htmlFor="signup-password" className="block text-xs font-medium text-gray-300 mb-1">
                         Password
                       </label>
                       <div className="relative">
                         <input
+                          id="signup-password"
                           type={showPassword ? 'text' : 'password'}
                           name="password"
+                          autoComplete="new-password"
                           value={formData.password}
                           onChange={handleChange}
                           className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"
@@ -380,13 +386,15 @@ const SignUp = () => {
 
                     {/* Confirm Password */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                      <label htmlFor="signup-confirm-password" className="block text-xs font-medium text-gray-300 mb-1">
                         Confirm Password
                       </label>
                       <div className="relative">
                         <input
+                          id="signup-confirm-password"
                           type={showConfirmPassword ? 'text' : 'password'}
                           name="confirmPassword"
+                          autoComplete="new-password"
                           value={formData.confirmPassword}
                           onChange={handleChange}
                           className="w-full px-3 py-2 bg-gray-800/50 border border-lime-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10 text-sm"

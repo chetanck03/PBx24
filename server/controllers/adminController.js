@@ -6,33 +6,32 @@ import Transaction from '../models/Transaction.js';
 import cache from '../utils/cache.js';
 
 /**
- * Get all users with full decrypted data
+ * Get all users with full decrypted data - OPTIMIZED
  */
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 20, role, kycStatus } = req.query;
+    const { page = 1, limit = 100, role, kycStatus } = req.query;
+    const skip = (page - 1) * limit;
     
     const filter = {};
     if (role) filter.role = role;
     if (kycStatus) filter.kycStatus = kycStatus;
     
-    // Don't use lean() so we can use model methods
+    // Use Promise.all for parallel execution
     const [users, total] = await Promise.all([
       User.find(filter)
-        .select('-__v')
+        .select('_id email name avatar role anonymousId walletBalance kycStatus isActive isBanned governmentIdType governmentIdProof createdAt updatedAt')
         .sort({ createdAt: -1 })
-        .limit(limit * 1)
-        .skip((page - 1) * limit),
+        .limit(parseInt(limit))
+        .skip(skip),
       User.countDocuments(filter)
     ]);
     
-    // Return full decrypted data for admin
+    // Fast mapping with error handling
     const usersData = users.map(user => {
       try {
         return user.toFullObject();
-      } catch (err) {
-        console.error('Error converting user:', err);
-        // Return basic user data if conversion fails
+      } catch {
         return {
           _id: user._id,
           email: user.email,
@@ -44,8 +43,7 @@ export const getAllUsers = async (req, res) => {
           kycStatus: user.kycStatus,
           isActive: user.isActive,
           isBanned: user.isBanned,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          createdAt: user.createdAt
         };
       }
     });
@@ -53,21 +51,12 @@ export const getAllUsers = async (req, res) => {
     res.json({
       success: true,
       data: usersData,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total
-      }
+      pagination: { current: parseInt(page), pages: Math.ceil(total / limit), total }
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error fetching users',
-        code: 'FETCH_ERROR',
-        details: error.message
-      }
+      error: { message: 'Error fetching users', code: 'FETCH_ERROR' }
     });
   }
 };
@@ -216,33 +205,33 @@ export const updateUserRole = async (req, res) => {
 };
 
 /**
- * Get all phones with full data including IMEI
+ * Get all phones with full data including IMEI - OPTIMIZED
  */
 export const getAllPhones = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, verificationStatus, sellerId } = req.query;
+    const { page = 1, limit = 100, status, verificationStatus, sellerId } = req.query;
+    const skip = (page - 1) * limit;
     
     const filter = {};
     if (status) filter.status = status;
     if (verificationStatus) filter.verificationStatus = verificationStatus;
     if (sellerId) filter.sellerId = sellerId;
     
-    // Don't use lean() so we can use model methods
+    // Parallel execution for speed
     const [phones, total] = await Promise.all([
       Phone.find(filter)
-        .select('-__v')
+        .select('_id sellerId anonymousSellerId brand model storage ram color condition images description minBidPrice auctionEndTime status verificationStatus location createdAt')
         .sort({ createdAt: -1 })
-        .limit(limit * 1)
-        .skip((page - 1) * limit),
+        .limit(parseInt(limit))
+        .skip(skip),
       Phone.countDocuments(filter)
     ]);
     
-    // Return full admin view with decrypted IMEI
+    // Fast mapping
     const phonesData = phones.map(phone => {
       try {
         return phone.toAdminObject();
-      } catch (err) {
-        console.error('Error converting phone:', err);
+      } catch {
         return {
           _id: phone._id,
           brand: phone.brand,
@@ -262,21 +251,12 @@ export const getAllPhones = async (req, res) => {
     res.json({
       success: true,
       data: phonesData,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total
-      }
+      pagination: { current: parseInt(page), pages: Math.ceil(total / limit), total }
     });
   } catch (error) {
-    console.error('Error fetching phones:', error);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error fetching phones',
-        code: 'FETCH_ERROR',
-        details: error.message
-      }
+      error: { message: 'Error fetching phones', code: 'FETCH_ERROR' }
     });
   }
 };
@@ -671,7 +651,7 @@ export const getAllBids = async (req, res) => {
 };
 
 /**
- * Get platform statistics
+ * Get platform statistics - OPTIMIZED with aggregation pipelines
  */
 export const getPlatformStatistics = async (req, res) => {
   try {
@@ -679,48 +659,75 @@ export const getPlatformStatistics = async (req, res) => {
     const cacheKey = 'platform_statistics';
     const cachedStats = cache.get(cacheKey);
     if (cachedStats) {
-      return res.json({
-        success: true,
-        data: cachedStats,
-        cached: true
-      });
+      return res.json({ success: true, data: cachedStats, cached: true });
     }
 
-    // Fetch all stats with individual error handling
-    const [userStats, phoneStats, auctionStats, bidStats, transactionStats, revenueData] = await Promise.all([
-      Promise.all([
-        User.countDocuments().catch(() => 0),
-        User.countDocuments({ role: 'user' }).catch(() => 0),
-        User.countDocuments({ role: 'admin' }).catch(() => 0),
-        User.countDocuments({ kycStatus: 'pending' }).catch(() => 0),
-        User.countDocuments({ kycStatus: 'verified' }).catch(() => 0),
-        User.countDocuments({ isBanned: true }).catch(() => 0)
-      ]),
-      Promise.all([
-        Phone.countDocuments().catch(() => 0),
-        Phone.countDocuments({ verificationStatus: 'pending' }).catch(() => 0),
-        Phone.countDocuments({ verificationStatus: 'approved' }).catch(() => 0),
-        Phone.countDocuments({ verificationStatus: 'rejected' }).catch(() => 0),
-        Phone.countDocuments({ status: 'live' }).catch(() => 0),
-        Phone.countDocuments({ status: 'sold' }).catch(() => 0)
-      ]),
-      Promise.all([
-        Auction.countDocuments().catch(() => 0),
-        Auction.countDocuments({ status: 'active' }).catch(() => 0),
-        Auction.countDocuments({ status: 'ended' }).catch(() => 0),
-        Auction.countDocuments({ status: 'completed' }).catch(() => 0)
-      ]),
-      Promise.all([
-        Bid.countDocuments().catch(() => 0),
-        Bid.countDocuments({ isWinning: true }).catch(() => 0)
-      ]),
-      Promise.all([
-        Transaction.countDocuments().catch(() => 0),
-        Transaction.countDocuments({ meetingStatus: 'pending' }).catch(() => 0),
-        Transaction.countDocuments({ meetingStatus: 'completed' }).catch(() => 0),
-        Transaction.countDocuments({ escrowStatus: 'held' }).catch(() => 0),
-        Transaction.countDocuments({ escrowStatus: 'released' }).catch(() => 0)
-      ]),
+    // Use aggregation pipelines for faster counting
+    const [userAgg, phoneAgg, auctionAgg, bidAgg, transactionAgg, revenueData] = await Promise.all([
+      // User stats in single aggregation
+      User.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            buyers: [{ $match: { role: 'user' } }, { $count: 'count' }],
+            admins: [{ $match: { role: 'admin' } }, { $count: 'count' }],
+            kycPending: [{ $match: { kycStatus: 'pending' } }, { $count: 'count' }],
+            kycVerified: [{ $match: { kycStatus: 'verified' } }, { $count: 'count' }],
+            banned: [{ $match: { isBanned: true } }, { $count: 'count' }]
+          }
+        }
+      ]).catch(() => [{}]),
+      
+      // Phone stats in single aggregation
+      Phone.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            pending: [{ $match: { verificationStatus: 'pending' } }, { $count: 'count' }],
+            approved: [{ $match: { verificationStatus: 'approved' } }, { $count: 'count' }],
+            rejected: [{ $match: { verificationStatus: 'rejected' } }, { $count: 'count' }],
+            live: [{ $match: { status: 'live' } }, { $count: 'count' }],
+            sold: [{ $match: { status: 'sold' } }, { $count: 'count' }]
+          }
+        }
+      ]).catch(() => [{}]),
+      
+      // Auction stats
+      Auction.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            active: [{ $match: { status: 'active' } }, { $count: 'count' }],
+            ended: [{ $match: { status: 'ended' } }, { $count: 'count' }],
+            completed: [{ $match: { status: 'completed' } }, { $count: 'count' }]
+          }
+        }
+      ]).catch(() => [{}]),
+      
+      // Bid stats
+      Bid.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            winning: [{ $match: { isWinning: true } }, { $count: 'count' }]
+          }
+        }
+      ]).catch(() => [{}]),
+      
+      // Transaction stats
+      Transaction.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            pending: [{ $match: { meetingStatus: 'pending' } }, { $count: 'count' }],
+            completed: [{ $match: { meetingStatus: 'completed' } }, { $count: 'count' }],
+            escrowHeld: [{ $match: { escrowStatus: 'held' } }, { $count: 'count' }],
+            escrowReleased: [{ $match: { escrowStatus: 'released' } }, { $count: 'count' }]
+          }
+        }
+      ]).catch(() => [{}]),
+      
+      // Revenue aggregation
       Transaction.aggregate([
         { $match: { escrowStatus: 'released' } },
         {
@@ -733,174 +740,158 @@ export const getPlatformStatistics = async (req, res) => {
         }
       ]).catch(() => [])
     ]);
+
+    // Helper to extract count from facet result
+    const getCount = (agg, field) => agg?.[0]?.[field]?.[0]?.count || 0;
     
     const stats = {
       users: {
-        total: userStats[0] || 0,
-        buyers: userStats[1] || 0,
-        sellers: userStats[1] || 0,
-        admins: userStats[2] || 0,
-        kycPending: userStats[3] || 0,
-        kycVerified: userStats[4] || 0,
-        banned: userStats[5] || 0
+        total: getCount(userAgg, 'total'),
+        buyers: getCount(userAgg, 'buyers'),
+        sellers: getCount(userAgg, 'buyers'),
+        admins: getCount(userAgg, 'admins'),
+        kycPending: getCount(userAgg, 'kycPending'),
+        kycVerified: getCount(userAgg, 'kycVerified'),
+        banned: getCount(userAgg, 'banned')
       },
       phones: {
-        total: phoneStats[0] || 0,
-        pending: phoneStats[1] || 0,
-        approved: phoneStats[2] || 0,
-        rejected: phoneStats[3] || 0,
-        live: phoneStats[4] || 0,
-        sold: phoneStats[5] || 0
+        total: getCount(phoneAgg, 'total'),
+        pending: getCount(phoneAgg, 'pending'),
+        approved: getCount(phoneAgg, 'approved'),
+        rejected: getCount(phoneAgg, 'rejected'),
+        live: getCount(phoneAgg, 'live'),
+        sold: getCount(phoneAgg, 'sold')
       },
       auctions: {
-        total: auctionStats[0] || 0,
-        active: auctionStats[1] || 0,
-        ended: auctionStats[2] || 0,
-        completed: auctionStats[3] || 0,
-        cancelled: Math.max(0, (auctionStats[0] || 0) - (auctionStats[1] || 0) - (auctionStats[2] || 0) - (auctionStats[3] || 0))
+        total: getCount(auctionAgg, 'total'),
+        active: getCount(auctionAgg, 'active'),
+        ended: getCount(auctionAgg, 'ended'),
+        completed: getCount(auctionAgg, 'completed'),
+        cancelled: Math.max(0, getCount(auctionAgg, 'total') - getCount(auctionAgg, 'active') - getCount(auctionAgg, 'ended') - getCount(auctionAgg, 'completed'))
       },
       bids: {
-        total: bidStats[0] || 0,
-        winning: bidStats[1] || 0
+        total: getCount(bidAgg, 'total'),
+        winning: getCount(bidAgg, 'winning')
       },
       transactions: {
-        total: transactionStats[0] || 0,
-        pending: transactionStats[1] || 0,
-        completed: transactionStats[2] || 0,
-        escrowHeld: transactionStats[3] || 0,
-        escrowReleased: transactionStats[4] || 0
+        total: getCount(transactionAgg, 'total'),
+        pending: getCount(transactionAgg, 'pending'),
+        completed: getCount(transactionAgg, 'completed'),
+        escrowHeld: getCount(transactionAgg, 'escrowHeld'),
+        escrowReleased: getCount(transactionAgg, 'escrowReleased')
       },
-      revenue: revenueData[0] || {
-        totalPlatformCommission: 0,
-        totalSellerPayouts: 0,
-        totalTransactionValue: 0
-      }
+      revenue: revenueData[0] || { totalPlatformCommission: 0, totalSellerPayouts: 0, totalTransactionValue: 0 }
     };
     
     // Cache for 30 seconds
     cache.set(cacheKey, stats, 30);
     
-    res.json({
-      success: true,
-      data: stats
-    });
+    res.json({ success: true, data: stats });
   } catch (error) {
-    console.error('Stats error:', error);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error fetching statistics',
-        code: 'STATS_ERROR',
-        details: error.message
-      }
+      error: { message: 'Error fetching statistics', code: 'STATS_ERROR' }
     });
   }
 };
 
 /**
- * Get all sold phones with buyer and seller details (Admin only)
+ * Get all sold phones with buyer and seller details (Admin only) - OPTIMIZED
  */
 export const getSoldPhones = async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
+    const skip = (page - 1) * limit;
     
-    // Get all phones with status 'sold'
-    const soldPhones = await Phone.find({ status: 'sold' })
-      .sort({ updatedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Phone.countDocuments({ status: 'sold' });
-    
-    // Enrich with buyer, seller, and transaction details
-    const enrichedPhones = await Promise.all(soldPhones.map(async (phone) => {
-      const phoneData = phone.toAdminObject();
-      
-      // Get seller details
-      const seller = await User.findById(phone.sellerId);
-      if (seller) {
-        phoneData.sellerDetails = {
-          _id: seller._id,
-          name: seller.name,
-          email: seller.email,
-          anonymousId: seller.anonymousId,
-          avatar: seller.avatar
-        };
-      }
-      
-      // Get auction to find winner
-      const auction = await Auction.findOne({ phoneId: phone._id });
-      if (auction) {
-        phoneData.auctionId = auction._id;
-        phoneData.finalBidAmount = auction.currentBid;
-        phoneData.totalBids = auction.totalBids;
-        
-        // Get winner/buyer details
-        const winnerId = auction.getWinnerId();
-        if (winnerId) {
-          const buyer = await User.findById(winnerId);
-          if (buyer) {
-            phoneData.buyerDetails = {
-              _id: buyer._id,
-              name: buyer.name,
-              email: buyer.email,
-              anonymousId: buyer.anonymousId,
-              avatar: buyer.avatar
-            };
+    // Use aggregation with $lookup for efficient data fetching
+    const [soldPhones, totalCount] = await Promise.all([
+      Phone.aggregate([
+        { $match: { status: 'sold' } },
+        { $sort: { updatedAt: -1 } },
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+        // Lookup seller
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'sellerId',
+            foreignField: '_id',
+            pipeline: [{ $project: { _id: 1, name: 1, email: 1, anonymousId: 1, avatar: 1 } }],
+            as: 'sellerData'
+          }
+        },
+        // Lookup auction
+        {
+          $lookup: {
+            from: 'auctions',
+            localField: '_id',
+            foreignField: 'phoneId',
+            pipeline: [{ $project: { _id: 1, currentBid: 1, totalBids: 1, winnerId: 1, anonymousLeadingBidder: 1 } }],
+            as: 'auctionData'
+          }
+        },
+        // Lookup transaction
+        {
+          $lookup: {
+            from: 'transactions',
+            localField: '_id',
+            foreignField: 'phoneId',
+            pipeline: [{ $project: { _id: 1, finalAmount: 1, platformCommission: 1, sellerPayout: 1, escrowStatus: 1, meetingStatus: 1, completedAt: 1, createdAt: 1, buyerId: 1 } }],
+            as: 'transactionData'
+          }
+        },
+        {
+          $project: {
+            _id: 1, sellerId: 1, anonymousSellerId: 1, brand: 1, model: 1, storage: 1, ram: 1, color: 1,
+            condition: 1, images: 1, description: 1, minBidPrice: 1, status: 1, location: 1, createdAt: 1, updatedAt: 1,
+            sellerDetails: { $arrayElemAt: ['$sellerData', 0] },
+            auction: { $arrayElemAt: ['$auctionData', 0] },
+            transaction: { $arrayElemAt: ['$transactionData', 0] }
           }
         }
-      }
-      
-      // Get transaction details if exists
-      const transaction = await Transaction.findOne({ phoneId: phone._id });
-      if (transaction) {
-        phoneData.transactionId = transaction._id;
-        phoneData.saleAmount = transaction.finalAmount;
-        phoneData.platformCommission = transaction.platformCommission;
-        phoneData.sellerPayout = transaction.sellerPayout;
-        phoneData.escrowStatus = transaction.escrowStatus;
-        phoneData.meetingStatus = transaction.meetingStatus;
-        phoneData.soldAt = transaction.completedAt || transaction.createdAt;
-        
-        // If no buyer from auction, try from transaction
-        if (!phoneData.buyerDetails) {
-          const buyerId = transaction.getBuyerId();
-          if (buyerId) {
-            const buyer = await User.findById(buyerId);
-            if (buyer) {
-              phoneData.buyerDetails = {
-                _id: buyer._id,
-                name: buyer.name,
-                email: buyer.email,
-                anonymousId: buyer.anonymousId,
-                avatar: buyer.avatar
-              };
-            }
-          }
-        }
-      }
-      
-      return phoneData;
+      ]),
+      Phone.countDocuments({ status: 'sold' })
+    ]);
+    
+    // Format response
+    const enrichedPhones = soldPhones.map(phone => ({
+      _id: phone._id,
+      sellerId: phone.sellerId,
+      anonymousSellerId: phone.anonymousSellerId,
+      brand: phone.brand,
+      model: phone.model,
+      storage: phone.storage,
+      ram: phone.ram,
+      color: phone.color,
+      condition: phone.condition,
+      images: phone.images,
+      description: phone.description,
+      minBidPrice: phone.minBidPrice,
+      status: phone.status,
+      location: phone.location,
+      createdAt: phone.createdAt,
+      sellerDetails: phone.sellerDetails || null,
+      auctionId: phone.auction?._id,
+      finalBidAmount: phone.auction?.currentBid,
+      totalBids: phone.auction?.totalBids,
+      transactionId: phone.transaction?._id,
+      saleAmount: phone.transaction?.finalAmount,
+      platformCommission: phone.transaction?.platformCommission,
+      sellerPayout: phone.transaction?.sellerPayout,
+      escrowStatus: phone.transaction?.escrowStatus,
+      meetingStatus: phone.transaction?.meetingStatus,
+      soldAt: phone.transaction?.completedAt || phone.transaction?.createdAt || phone.updatedAt
     }));
     
     res.json({
       success: true,
       data: enrichedPhones,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total
-      }
+      pagination: { current: parseInt(page), pages: Math.ceil(totalCount / limit), total: totalCount }
     });
   } catch (error) {
-    console.error('Error fetching sold phones:', error);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error fetching sold phones',
-        code: 'FETCH_ERROR',
-        details: error.message
-      }
+      error: { message: 'Error fetching sold phones', code: 'FETCH_ERROR' }
     });
   }
 };

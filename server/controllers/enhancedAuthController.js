@@ -18,10 +18,14 @@ const generateOTP = () => {
  * Send OTP for signup
  */
 export const sendSignupOTP = async (req, res) => {
+  console.log('[AUTH] sendSignupOTP called');
+  
   try {
     const { email, name } = req.body;
+    console.log('[AUTH] Request body - email:', email, 'name:', name);
     
     if (!email || !name) {
+      console.log('[AUTH] Missing fields');
       return res.status(400).json({
         success: false,
         error: {
@@ -32,8 +36,10 @@ export const sendSignupOTP = async (req, res) => {
     }
     
     // Check if user already exists
+    console.log('[AUTH] Checking if user exists...');
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
+      console.log('[AUTH] User already exists');
       return res.status(400).json({
         success: false,
         error: {
@@ -45,20 +51,35 @@ export const sendSignupOTP = async (req, res) => {
     
     // Generate OTP
     const otp = generateOTP();
+    console.log('[AUTH] Generated OTP for:', email);
     
-    // Delete any existing OTPs for this email
+    // Delete any existing OTPs for this email and save new one
+    console.log('[AUTH] Saving OTP to database...');
     await OTP.deleteMany({ email: email.toLowerCase(), type: 'signup' });
-    
-    // Save OTP
-    const otpDoc = new OTP({
+    await OTP.create({
       email: email.toLowerCase(),
       otp,
       type: 'signup'
     });
-    await otpDoc.save();
+    console.log('[AUTH] OTP saved to database');
     
     // Send email
-    await sendOTPEmail(email, otp, name);
+    console.log('[AUTH] Sending OTP email...');
+    let emailSent = false;
+    try {
+      await sendOTPEmail(email, otp, name);
+      console.log('[AUTH] OTP email sent successfully');
+      emailSent = true;
+    } catch (emailError) {
+      console.error('[AUTH] Email sending failed:', emailError.message);
+      console.error('[AUTH] Email error stack:', emailError.stack);
+      // Log but don't fail - OTP is saved, user can retry or check spam
+      // In production, you might want to use a queue/retry system
+    }
+    
+    if (!emailSent) {
+      console.log('[AUTH] Email failed but OTP saved - returning partial success');
+    }
     
     res.json({
       success: true,
@@ -68,12 +89,13 @@ export const sendSignupOTP = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Send signup OTP error:', error);
+    console.error('[AUTH] sendSignupOTP error:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: 'Failed to send OTP',
-        code: 'OTP_SEND_ERROR'
+        message: 'Failed to send OTP. Please try again.',
+        code: 'OTP_SEND_ERROR',
+        details: error.message
       }
     });
   }
@@ -241,8 +263,11 @@ export const loginWithEmail = async (req, res) => {
  * Send OTP for password reset
  */
 export const sendResetOTP = async (req, res) => {
+  console.log('[AUTH] sendResetOTP called');
+  
   try {
     const { email } = req.body;
+    console.log('[AUTH] Reset OTP request for:', email);
     
     if (!email) {
       return res.status(400).json({
@@ -257,7 +282,7 @@ export const sendResetOTP = async (req, res) => {
     // Check if user exists
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      // Don't reveal if user exists or not
+      console.log('[AUTH] User not found, returning generic response');
       return res.json({
         success: true,
         message: 'If an account exists, an OTP has been sent'
@@ -266,32 +291,47 @@ export const sendResetOTP = async (req, res) => {
     
     // Generate OTP
     const otp = generateOTP();
+    console.log('[AUTH] Generated reset OTP for:', email);
     
-    // Delete any existing reset OTPs
+    // Delete existing OTPs and save new one
     await OTP.deleteMany({ email: email.toLowerCase(), type: 'reset' });
-    
-    // Save OTP
-    const otpDoc = new OTP({
+    await OTP.create({
       email: email.toLowerCase(),
       otp,
       type: 'reset'
     });
-    await otpDoc.save();
+    console.log('[AUTH] Reset OTP saved to database');
     
     // Send email
-    await sendOTPEmail(email, otp, user.name);
+    console.log('[AUTH] Sending reset OTP email...');
+    try {
+      await sendOTPEmail(email, otp, user.name);
+      console.log('[AUTH] Reset OTP email sent successfully');
+    } catch (emailError) {
+      console.error('[AUTH] Reset email sending failed:', emailError.message);
+      await OTP.deleteMany({ email: email.toLowerCase(), type: 'reset' });
+      return res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to send OTP email. Please try again.',
+          code: 'EMAIL_SEND_ERROR',
+          details: emailError.message
+        }
+      });
+    }
     
     res.json({
       success: true,
       message: 'OTP sent to your email'
     });
   } catch (error) {
-    console.error('Send reset OTP error:', error);
+    console.error('[AUTH] sendResetOTP error:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: 'Failed to send OTP',
-        code: 'OTP_SEND_ERROR'
+        message: 'Failed to send OTP. Please try again.',
+        code: 'OTP_SEND_ERROR',
+        details: error.message
       }
     });
   }

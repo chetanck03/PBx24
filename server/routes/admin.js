@@ -61,20 +61,6 @@ router.get('/phones/:phoneId/bids', getPhoneBids);
 router.put('/phones/:id/verify', async (req, res, next) => {
   try {
     const { verificationStatus, adminNotes } = req.body;
-    console.log(`\n=== PHONE VERIFICATION START ===`);
-    console.log(`Verifying phone ${req.params.id} with status: ${verificationStatus}`);
-    console.log(`Request body:`, req.body);
-    
-    const phone = await Phone.findById(req.params.id);
-    
-    if (!phone) {
-      console.log(`Phone not found: ${req.params.id}`);
-      return res.status(404).json({ success: false, error: { message: 'Phone not found' } });
-    }
-    
-    console.log(`Phone found: ${phone._id}`);
-    console.log(`Current verification status: ${phone.verificationStatus}`);
-    console.log(`Current phone status: ${phone.status}`);
     
     if (!['approved', 'rejected', 'pending'].includes(verificationStatus)) {
       return res.status(400).json({ 
@@ -83,84 +69,71 @@ router.put('/phones/:id/verify', async (req, res, next) => {
       });
     }
     
-    console.log(`\n--- UPDATING PHONE ---`);
-    console.log(`Setting verificationStatus from "${phone.verificationStatus}" to "${verificationStatus}"`);
-    
-    phone.verificationStatus = verificationStatus;
-    if (adminNotes) {
-      console.log(`Adding admin notes: ${adminNotes}`);
-      phone.adminNotes = adminNotes;
+    const phone = await Phone.findById(req.params.id);
+    if (!phone) {
+      return res.status(404).json({ success: false, error: { message: 'Phone not found' } });
     }
     
+    phone.verificationStatus = verificationStatus;
+    if (adminNotes) phone.adminNotes = adminNotes;
+    
+    let auction = null;
+    
     if (verificationStatus === 'approved') {
-      console.log(`Setting phone status to 'live'`);
       phone.status = 'live';
       
-      // Create auction automatically when phone is approved
+      // Create auction automatically
       const Auction = (await import('../models/Auction.js')).default;
-      const existingAuction = await Auction.findOne({ phoneId: phone._id });
+      const existingAuction = await Auction.findOne({ phoneId: phone._id }).lean();
       
       if (!existingAuction) {
-        console.log(`Creating auction for approved phone`);
-        // Set default auction end time if not set (7 days from now)
         const auctionEndTime = phone.auctionEndTime || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        
-        const auction = new Auction({
+        auction = new Auction({
           phoneId: phone._id,
           sellerId: phone.sellerId,
           anonymousSellerId: phone.anonymousSellerId,
           startingBid: phone.minBidPrice,
           currentBid: 0,
-          auctionEndTime: auctionEndTime,
+          auctionEndTime,
           status: 'active'
         });
-        await auction.save();
-        console.log('Auction created for phone:', phone._id);
+        // Save phone and auction in parallel
+        await Promise.all([phone.save(), auction.save()]);
       } else {
-        console.log('Auction already exists for this phone');
+        await phone.save();
+        auction = existingAuction;
       }
-    } else if (verificationStatus === 'rejected') {
-      console.log(`Setting phone status to 'rejected'`);
-      phone.status = 'rejected';
+      
+      // Emit WebSocket event for real-time marketplace update
+      const io = req.app.get('io');
+      if (io) {
+        const newListingData = {
+          phone: phone.toPublicObject(),
+          auction: auction ? {
+            _id: auction._id,
+            currentBid: auction.currentBid || 0,
+            totalBids: auction.totalBids || 0,
+            auctionEndTime: auction.auctionEndTime,
+            status: auction.status
+          } : null
+        };
+        io.to('marketplace').emit('new_listing', newListingData);
+      }
+    } else {
+      if (verificationStatus === 'rejected') phone.status = 'rejected';
+      await phone.save();
     }
-    
-    console.log(`\n--- SAVING PHONE ---`);
-    console.log(`About to save phone with verificationStatus: ${phone.verificationStatus}, status: ${phone.status}`);
-    
-    // Save the phone once after all modifications
-    const savedPhone = await phone.save();
-    console.log(`Phone saved successfully!`);
-    console.log(`Saved phone verificationStatus: ${savedPhone.verificationStatus}`);
-    console.log(`Saved phone status: ${savedPhone.status}`);
-    
-    // Verify the save by fetching from database
-    console.log(`\n--- VERIFICATION CHECKS ---`);
-    const verifyPhone = await Phone.findById(phone._id);
-    console.log(`DB Check 1 - verificationStatus: ${verifyPhone.verificationStatus}, status: ${verifyPhone.status}`);
-    
-    // Double check with a fresh query
-    const freshPhone = await Phone.findOne({ _id: phone._id });
-    console.log(`DB Check 2 - verificationStatus: ${freshPhone.verificationStatus}, status: ${freshPhone.status}`);
-    
-    console.log(`\n--- SENDING RESPONSE ---`);
-    const responseData = freshPhone.toAdminObject();
-    console.log(`Response data verificationStatus: ${responseData.verificationStatus}`);
-    console.log(`Response data status: ${responseData.status}`);
-    console.log(`=== PHONE VERIFICATION END ===\n`);
     
     res.json({ 
       success: true, 
-      data: responseData,
+      data: phone.toAdminObject(),
       message: `Phone ${verificationStatus} successfully${verificationStatus === 'approved' ? ' and auction created' : ''}`
     });
   } catch (error) {
-    console.error('Error verifying phone:', error);
+    console.error('Error verifying phone:', error.message);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Failed to verify phone',
-        details: error.message
-      }
+      error: { message: 'Failed to verify phone', details: error.message }
     });
   }
 });

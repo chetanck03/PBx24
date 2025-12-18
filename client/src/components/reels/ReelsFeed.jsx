@@ -5,6 +5,68 @@ import { useAuth } from '../../context/AuthContext';
 import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share2, Loader2, X, Send, Trash2, Eye, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// Delete Reel Button Component
+const DeleteReelButton = ({ reelId, onDelete }) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    setDeleting(true);
+    try {
+      await reelAPI.deleteReel(reelId);
+      toast.success('Reel deleted successfully');
+      // Trigger page reload to refresh the feed
+      window.location.reload();
+    } catch (err) {
+      toast.error('Failed to delete reel');
+      console.error(err);
+    } finally {
+      setDeleting(false);
+      setShowConfirm(false);
+    }
+  };
+
+  if (showConfirm) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="flex flex-col items-center gap-1 text-white"
+        >
+          <div className={`p-3 rounded-full ${deleting ? 'bg-gray-500' : 'bg-red-600 hover:bg-red-700'} transition`}>
+            {deleting ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : (
+              <Trash2 className="w-6 h-6" />
+            )}
+          </div>
+          <span className="text-xs font-medium text-red-400">Confirm</span>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
+          className="text-xs text-gray-400 hover:text-white"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
+      className="flex flex-col items-center gap-1 text-white"
+    >
+      <div className="p-3 rounded-full bg-red-500/50 hover:bg-red-600 transition">
+        <Trash2 className="w-6 h-6" />
+      </div>
+      <span className="text-xs font-medium">Delete</span>
+    </button>
+  );
+};
+
 const ReelsFeed = () => {
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -528,6 +590,11 @@ const ReelItem = ({ reel, isActive, onUpdate }) => {
           </div>
           <span className="text-xs font-medium">{viewCount}</span>
         </div>
+
+        {/* Delete button - Only visible to reel owner */}
+        {isAuthenticated && user && reel.userId?._id === user._id && (
+          <DeleteReelButton reelId={reel._id} onDelete={onUpdate} />
+        )}
       </div>
 
       {/* Bottom gradient overlay for better text visibility */}

@@ -2,6 +2,76 @@ import { useState, useEffect, useCallback } from 'react';
 import { userAPI, phoneAPI, bidAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+// Delete Confirmation Modal Component
+const DeletePhoneModal = ({ isOpen, phone, onClose, onConfirm, isDeleting }) => {
+  if (!isOpen || !phone) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Delete Listing</h3>
+            <p className="text-sm text-gray-400">This action cannot be undone</p>
+          </div>
+        </div>
+        
+        <div className="bg-[#1a1a1a] rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            {phone.images?.[0] && (
+              <img src={phone.images[0]} alt={phone.model} className="w-16 h-16 object-cover rounded-lg" />
+            )}
+            <div>
+              <p className="font-semibold text-white">{phone.brand} {phone.model}</p>
+              <p className="text-sm text-gray-400">{phone.storage} - {phone.condition}</p>
+              <span className={`text-xs px-2 py-0.5 rounded ${
+                phone.status === 'live' ? 'bg-green-500/20 text-green-400' :
+                phone.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                {phone.status?.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <p className="text-gray-300 text-sm mb-6">
+          Are you sure you want to delete this phone listing? This will permanently remove it from the marketplace.
+        </p>
+        
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-3 bg-[#1a1a1a] text-white rounded-lg hover:bg-[#2a2a2a] transition font-medium disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Deleting...
+              </>
+            ) : (
+              'Delete Listing'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const UserDashboard = () => {
   const [user, setUser] = useState(null);
@@ -11,7 +81,37 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [soldPhones, setSoldPhones] = useState([]);
   const [purchasedPhones, setPurchasedPhones] = useState([]);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, phone: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
+
+  const handleDeleteClick = (e, phone) => {
+    e.stopPropagation(); // Prevent navigation to phone detail
+    setDeleteModal({ isOpen: true, phone });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.phone) return;
+    
+    setIsDeleting(true);
+    try {
+      await phoneAPI.deletePhone(deleteModal.phone._id);
+      // Remove the phone from the list
+      setMyPhones(prev => prev.filter(p => p._id !== deleteModal.phone._id));
+      setDeleteModal({ isOpen: false, phone: null });
+    } catch (error) {
+      console.error('Error deleting phone:', error);
+      alert(error.response?.data?.error?.message || 'Failed to delete phone listing');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteClose = () => {
+    if (!isDeleting) {
+      setDeleteModal({ isOpen: false, phone: null });
+    }
+  };
 
   const menuItems = [
     { id: 'overview', label: 'Overview' },
@@ -321,15 +421,34 @@ const UserDashboard = () => {
                     {myPhones.map((phone) => (
                       <div
                         key={phone._id}
-                        className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#c4ff0d] transition cursor-pointer"
-                        onClick={() => navigate(`/phone/${phone._id}`)}
+                        className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl hover:border-[#c4ff0d] transition"
                       >
-                        <div className="h-40 sm:h-48 bg-[#1a1a1a]">
+                        {/* Image Section */}
+                        <div 
+                          className="relative h-40 sm:h-48 bg-[#1a1a1a] cursor-pointer rounded-t-xl overflow-hidden"
+                          onClick={() => navigate(`/phone/${phone._id}`)}
+                        >
                           {phone.images?.[0] && (
                             <img src={phone.images[0]} alt={phone.model} className="w-full h-full object-cover" />
                           )}
+                          {/* Status Badge */}
+                          <div className="absolute top-2 left-2 z-10">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${
+                              phone.status === 'live' ? 'bg-green-500 text-white' :
+                              phone.status === 'pending' ? 'bg-yellow-500 text-black' :
+                              phone.status === 'rejected' ? 'bg-red-500 text-white' :
+                              'bg-gray-500 text-white'
+                            }`}>
+                              {phone.status?.toUpperCase()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="p-4 sm:p-5">
+                        
+                        {/* Content Section */}
+                        <div 
+                          className="p-4 sm:p-5 cursor-pointer"
+                          onClick={() => navigate(`/phone/${phone._id}`)}
+                        >
                           <h3 className="font-bold text-base sm:text-lg text-white mb-2">{phone.brand} {phone.model}</h3>
                           <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">{phone.storage} - {phone.condition}</p>
                           <div className="flex items-center justify-between">
@@ -338,6 +457,19 @@ const UserDashboard = () => {
                               {phone.currentBid > 0 ? `₹${phone.currentBid?.toLocaleString()}` : 'No bids yet'}
                             </span>
                           </div>
+                        </div>
+                        
+                        {/* Delete Button - Bottom action bar */}
+                        <div className="px-4 pb-4 pt-0">
+                          <button
+                            onClick={(e) => handleDeleteClick(e, phone)}
+                            className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors font-medium text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete Listing
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -540,6 +672,14 @@ const UserDashboard = () => {
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <DeletePhoneModal
+        isOpen={deleteModal.isOpen}
+        phone={deleteModal.phone}
+        onClose={handleDeleteClose}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };

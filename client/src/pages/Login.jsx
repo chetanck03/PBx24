@@ -180,11 +180,14 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                <label htmlFor="login-email" className="block text-sm font-medium text-gray-300 mb-1.5">
                   Email address
                 </label>
                 <input
+                  id="login-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition"
@@ -195,12 +198,15 @@ const Login = () => {
 
               {/* Password Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                <label htmlFor="login-password" className="block text-sm font-medium text-gray-300 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-transparent transition pr-10"

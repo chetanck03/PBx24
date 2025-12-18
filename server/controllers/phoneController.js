@@ -509,24 +509,50 @@ export const deletePhone = async (req, res) => {
       });
     }
     
-    // Can only delete if not live or has no bids
-    if (phone.status === 'live') {
+    // Cannot delete sold phones
+    if (phone.status === 'sold') {
       return res.status(400).json({
         success: false,
         error: {
-          message: 'Cannot delete live listing',
-          code: 'LISTING_LIVE'
+          message: 'Cannot delete sold listing',
+          code: 'LISTING_SOLD'
         }
       });
     }
     
+    // If phone is live, check if it has any bids
+    if (phone.status === 'live') {
+      const Auction = (await import('../models/Auction.js')).default;
+      const auction = await Auction.findOne({ phoneId: phone._id });
+      
+      if (auction && auction.totalBids > 0) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Cannot delete listing with active bids. Please wait for the auction to end.',
+            code: 'HAS_BIDS'
+          }
+        });
+      }
+      
+      // Delete the associated auction if exists
+      if (auction) {
+        await Auction.deleteOne({ _id: auction._id });
+      }
+    }
+    
     await Phone.deleteOne({ _id: id });
+    
+    // Invalidate cache
+    invalidatePhoneCache(id).catch(() => {});
+    deleteCachePattern('marketplace:*').catch(() => {});
     
     res.json({
       success: true,
       message: 'Phone listing deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting phone:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -639,7 +665,7 @@ export const getPurchasedPhones = async (req, res) => {
 };
 
 /**
- * Get marketplace phones with auctions - OPTIMIZED single call
+ * Get marketplace phones with auctions - OPTIMIZED with aggregation
  */
 export const getMarketplacePhones = async (req, res) => {
   try {
@@ -651,96 +677,68 @@ export const getMarketplacePhones = async (req, res) => {
     // Try cache first
     const cached = await getCache(cacheKey);
     if (cached) {
-      return res.json({
-        success: true,
-        data: cached,
-        count: cached.length,
-        cached: true
-      });
+      return res.json({ success: true, data: cached, count: cached.length, cached: true });
     }
     
-    // Build query
-    const query = { status: 'live' };
-    if (brand) query.brand = brand;
-    if (condition) query.condition = condition;
-    if (storage) query.storage = storage;
-    if (ram) query.ram = ram;
+    // Build match stage
+    const matchStage = { status: 'live' };
+    if (brand) matchStage.brand = brand;
+    if (condition) matchStage.condition = condition;
+    if (storage) matchStage.storage = storage;
+    if (ram) matchStage.ram = ram;
     
     // Location filter
     if (location || state || city) {
-      const locationConditions = [];
-      if (location) locationConditions.push({ location: { $regex: location, $options: 'i' } });
-      if (state) locationConditions.push({ location: { $regex: state, $options: 'i' } });
-      if (city) locationConditions.push({ location: { $regex: city, $options: 'i' } });
-      
-      if (locationConditions.length > 1) {
-        query.$and = locationConditions;
-      } else if (locationConditions.length === 1) {
-        query.location = locationConditions[0].location;
-      }
+      const locationRegex = [location, state, city].filter(Boolean).join('|');
+      matchStage.location = { $regex: locationRegex, $options: 'i' };
     }
     
-    // Get phones with lean() for speed
-    const phones = await Phone.find(query).sort({ createdAt: -1 }).lean();
-    
-    // Get all auctions for these phones in a single query
-    const Auction = (await import('../models/Auction.js')).default;
-    const phoneIds = phones.map(p => p._id);
-    const auctions = await Auction.find({ 
-      phoneId: { $in: phoneIds },
-      status: 'active'
-    }).lean();
-    
-    // Create auction map for quick lookup
-    const auctionMap = {};
-    auctions.forEach(auction => {
-      auctionMap[auction.phoneId.toString()] = {
-        _id: auction._id,
-        currentBid: auction.currentBid,
-        totalBids: auction.totalBids,
-        auctionEndTime: auction.auctionEndTime,
-        status: auction.status,
-        anonymousLeadingBidder: auction.anonymousLeadingBidder
-      };
-    });
-    
-    // Combine phones with their auctions
-    const result = phones.map(phone => ({
-      _id: phone._id,
-      anonymousSellerId: phone.anonymousSellerId,
-      brand: phone.brand,
-      model: phone.model,
-      storage: phone.storage,
-      ram: phone.ram,
-      color: phone.color,
-      condition: phone.condition,
-      accessories: phone.accessories,
-      images: phone.images,
-      description: phone.description,
-      minBidPrice: phone.minBidPrice,
-      auctionEndTime: phone.auctionEndTime,
-      status: phone.status,
-      location: phone.location,
-      createdAt: phone.createdAt,
-      auction: auctionMap[phone._id.toString()] || null
-    }));
+    // Use aggregation with $lookup for single query
+    const result = await Phone.aggregate([
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      { $limit: 100 }, // Limit for performance
+      {
+        $lookup: {
+          from: 'auctions',
+          let: { phoneId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ['$phoneId', '$$phoneId'] }, { $eq: ['$status', 'active'] }] } } },
+            { $project: { _id: 1, currentBid: 1, totalBids: 1, auctionEndTime: 1, status: 1, anonymousLeadingBidder: 1 } }
+          ],
+          as: 'auctionData'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          anonymousSellerId: 1,
+          brand: 1,
+          model: 1,
+          storage: 1,
+          ram: 1,
+          color: 1,
+          condition: 1,
+          images: 1,
+          description: 1,
+          minBidPrice: 1,
+          auctionEndTime: 1,
+          status: 1,
+          location: 1,
+          createdAt: 1,
+          auction: { $arrayElemAt: ['$auctionData', 0] }
+        }
+      }
+    ]);
     
     // Cache for 30 seconds
     setCache(cacheKey, result, CACHE_TTL.MARKETPLACE).catch(() => {});
     
-    res.json({
-      success: true,
-      data: result,
-      count: result.length
-    });
+    res.json({ success: true, data: result, count: result.length });
   } catch (error) {
-    console.error('Error fetching marketplace:', error);
     res.status(500).json({
       success: false,
-      error: {
-        message: 'Error fetching marketplace',
-        code: 'FETCH_ERROR'
-      }
+      error: { message: 'Error fetching marketplace', code: 'FETCH_ERROR' }
     });
   }
 };
