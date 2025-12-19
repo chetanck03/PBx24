@@ -1,19 +1,21 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Initialize Resend client
-let resend = null;
+// Create transporter with Gmail
+let transporter = null;
 
-const getResendClient = () => {
-  if (resend) return resend;
+const getTransporter = () => {
+  if (transporter) return transporter;
   
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[EMAIL] RESEND_API_KEY not set');
-    throw new Error('Email service not configured: RESEND_API_KEY missing');
-  }
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
   
-  resend = new Resend(process.env.RESEND_API_KEY);
-  console.log('[EMAIL] Resend client initialized');
-  return resend;
+  console.log('[EMAIL] Gmail transporter initialized');
+  return transporter;
 };
 
 /**
@@ -23,10 +25,10 @@ export const sendOTPEmail = async (email, otp, name = 'User') => {
   console.log(`[EMAIL] Sending OTP to: ${email}`);
   
   try {
-    const client = getResendClient();
+    const transport = getTransporter();
     
-    const { data, error } = await client.emails.send({
-      from: 'PhoneBid <onboarding@resend.dev>',
+    await transport.sendMail({
+      from: `"PhoneBid" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: `${otp} is your PhoneBid verification code`,
       html: `
@@ -44,24 +46,13 @@ export const sendOTPEmail = async (email, otp, name = 'User') => {
             <p style="margin: 20px 0 0 0; padding: 15px; background: #fff3cd; border-radius: 5px; color: #856404;">
               <strong>⏰ Expires in 10 minutes</strong>
             </p>
-            <p style="margin: 20px 0 0 0; color: #999; font-size: 12px;">
-              If you didn't request this code, please ignore this email.
-            </p>
           </div>
-          <p style="text-align: center; color: #999; font-size: 11px; margin-top: 20px;">
-            © ${new Date().getFullYear()} PhoneBid Marketplace
-          </p>
         </div>
       `
     });
 
-    if (error) {
-      console.error('[EMAIL] Resend error:', error);
-      throw new Error(error.message);
-    }
-
-    console.log('[EMAIL] OTP sent successfully, ID:', data?.id);
-    return { success: true, id: data?.id };
+    console.log('[EMAIL] OTP sent successfully');
+    return { success: true };
   } catch (error) {
     console.error('[EMAIL] Failed to send OTP:', error.message);
     throw error;
@@ -72,43 +63,17 @@ export const sendOTPEmail = async (email, otp, name = 'User') => {
  * Send welcome email
  */
 export const sendWelcomeEmail = async (email, name) => {
-  console.log(`[EMAIL] Sending welcome email to: ${email}`);
-  
   try {
-    const client = getResendClient();
-    
-    const { data, error } = await client.emails.send({
-      from: 'PhoneBid <onboarding@resend.dev>',
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"PhoneBid" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Welcome to PhoneBid Marketplace!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #1a1a1a; color: #c4ff0d; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0;">🎉 Welcome to PhoneBid!</h1>
-          </div>
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Welcome to PhoneBid Marketplace - where you can buy and sell phones anonymously!</p>
-            <p><strong>What you can do:</strong></p>
-            <ul>
-              <li>Browse phones and place bids anonymously</li>
-              <li>List your phones for auction</li>
-              <li>Your identity is protected with anonymous IDs</li>
-            </ul>
-            <p>Best regards,<br><strong>PhoneBid Team</strong></p>
-          </div>
-        </div>
-      `
+      html: `<div style="font-family: Arial;"><h1>Welcome ${name}!</h1><p>Thanks for joining PhoneBid.</p></div>`
     });
-
-    if (error) {
-      console.error('[EMAIL] Welcome email error:', error);
-    } else {
-      console.log('[EMAIL] Welcome email sent, ID:', data?.id);
-    }
+    console.log('[EMAIL] Welcome email sent');
   } catch (error) {
     console.error('[EMAIL] Welcome email failed:', error.message);
-    // Don't throw - welcome email is not critical
   }
 };
 
@@ -116,42 +81,17 @@ export const sendWelcomeEmail = async (email, name) => {
  * Send password reset email
  */
 export const sendPasswordResetEmail = async (email, resetToken, name) => {
-  console.log(`[EMAIL] Sending password reset to: ${email}`);
-  
   const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
-  
   try {
-    const client = getResendClient();
-    
-    const { data, error } = await client.emails.send({
-      from: 'PhoneBid <onboarding@resend.dev>',
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"PhoneBid" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Reset Your PhoneBid Password',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #1a1a1a; color: #c4ff0d; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0;">🔑 Password Reset</h1>
-          </div>
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Click the button below to reset your password:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background: #c4ff0d; color: #1a1a1a; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Password</a>
-            </div>
-            <p style="color: #666;"><strong>This link expires in 1 hour.</strong></p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-          </div>
-        </div>
-      `
+      html: `<div style="font-family: Arial;"><h1>Password Reset</h1><p>Hi ${name},</p><p><a href="${resetUrl}">Click here to reset your password</a></p><p>Expires in 1 hour.</p></div>`
     });
-
-    if (error) {
-      console.error('[EMAIL] Password reset error:', error);
-      throw new Error(error.message);
-    }
-
-    console.log('[EMAIL] Password reset email sent, ID:', data?.id);
-    return { success: true, id: data?.id };
+    console.log('[EMAIL] Password reset email sent');
+    return { success: true };
   } catch (error) {
     console.error('[EMAIL] Password reset failed:', error.message);
     throw error;
@@ -162,47 +102,16 @@ export const sendPasswordResetEmail = async (email, resetToken, name) => {
  * Send bid acceptance email to buyer
  */
 export const sendBidAcceptanceEmail = async (email, name, phoneDetails, bidAmount) => {
-  console.log(`[EMAIL] Sending bid acceptance to buyer: ${email}`);
-  
   try {
-    const client = getResendClient();
-    
-    const { data, error } = await client.emails.send({
-      from: 'PhoneBid <onboarding@resend.dev>',
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"PhoneBid" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: '🎉 Your Bid Has Been Accepted! - PhoneBid',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #10b981; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0;">🎉 Congratulations!</h1>
-            <p style="margin: 10px 0 0 0;">Your Bid Has Been Accepted</p>
-          </div>
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Great news! The seller has accepted your bid.</p>
-            <div style="background: white; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <p style="margin: 0 0 10px 0;"><strong>Phone:</strong> ${phoneDetails.brand} ${phoneDetails.model}</p>
-              <p style="margin: 0 0 10px 0;"><strong>Storage:</strong> ${phoneDetails.storage}</p>
-              <p style="margin: 0 0 10px 0;"><strong>Condition:</strong> ${phoneDetails.condition}</p>
-              <p style="margin: 0;"><strong>Your Winning Bid:</strong></p>
-              <p style="font-size: 28px; font-weight: bold; color: #10b981; margin: 5px 0;">₹${bidAmount.toLocaleString()}</p>
-            </div>
-            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 5px;">
-              <p style="margin: 0;"><strong>⚠️ Next Step:</strong> Pay ₹2,000 deposit to admin within 24 hours.</p>
-            </div>
-            <p>Best regards,<br><strong>PhoneBid Team</strong></p>
-          </div>
-        </div>
-      `
+      html: `<div style="font-family: Arial;"><h1>Congratulations ${name}!</h1><p>Your bid of ₹${bidAmount.toLocaleString()} for ${phoneDetails.brand} ${phoneDetails.model} has been accepted!</p></div>`
     });
-
-    if (error) {
-      console.error('[EMAIL] Bid acceptance error:', error);
-      throw new Error(error.message);
-    }
-
-    console.log('[EMAIL] Bid acceptance email sent, ID:', data?.id);
-    return { success: true, id: data?.id };
+    console.log('[EMAIL] Bid acceptance email sent');
+    return { success: true };
   } catch (error) {
     console.error('[EMAIL] Bid acceptance failed:', error.message);
     throw error;
@@ -213,44 +122,16 @@ export const sendBidAcceptanceEmail = async (email, name, phoneDetails, bidAmoun
  * Send bid acceptance email to seller
  */
 export const sendBidAcceptanceEmailToSeller = async (email, name, phoneDetails, bidAmount, buyerAnonymousId) => {
-  console.log(`[EMAIL] Sending sale notification to seller: ${email}`);
-  
   try {
-    const client = getResendClient();
-    
-    const { data, error } = await client.emails.send({
-      from: 'PhoneBid <onboarding@resend.dev>',
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"PhoneBid" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: '💰 Your Phone Has Been Sold! - PhoneBid',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #c4ff0d 0%, #a3e635 100%); color: #1a1a1a; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0;">💰 Phone Sold!</h1>
-          </div>
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Congratulations! Your phone has been sold.</p>
-            <div style="background: white; border-left: 4px solid #c4ff0d; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <p style="margin: 0 0 10px 0;"><strong>Phone:</strong> ${phoneDetails.brand} ${phoneDetails.model}</p>
-              <p style="margin: 0 0 10px 0;"><strong>Storage:</strong> ${phoneDetails.storage}</p>
-              <p style="margin: 0;"><strong>Sold For:</strong></p>
-              <p style="font-size: 28px; font-weight: bold; color: #16a34a; margin: 5px 0;">₹${bidAmount.toLocaleString()}</p>
-              <p style="margin: 10px 0 0 0;"><strong>Buyer ID:</strong> ${buyerAnonymousId}</p>
-            </div>
-            <p>The buyer will pay a deposit within 24 hours. Admin will contact you with next steps.</p>
-            <p>Best regards,<br><strong>PhoneBid Team</strong></p>
-          </div>
-        </div>
-      `
+      html: `<div style="font-family: Arial;"><h1>Phone Sold!</h1><p>Hi ${name}, your ${phoneDetails.brand} ${phoneDetails.model} sold for ₹${bidAmount.toLocaleString()} to buyer ${buyerAnonymousId}.</p></div>`
     });
-
-    if (error) {
-      console.error('[EMAIL] Seller notification error:', error);
-      throw new Error(error.message);
-    }
-
-    console.log('[EMAIL] Seller notification sent, ID:', data?.id);
-    return { success: true, id: data?.id };
+    console.log('[EMAIL] Seller notification sent');
+    return { success: true };
   } catch (error) {
     console.error('[EMAIL] Seller notification failed:', error.message);
     throw error;

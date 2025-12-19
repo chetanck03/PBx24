@@ -115,15 +115,15 @@ const ProfessionalHome = () => {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 lg:gap-6 mt-6 lg:mt-8">
                 <div>
-                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1">10,000+</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1"></div>
                   <div className="text-xs lg:text-sm text-gray-500">Phones Listed</div>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1">50,000+</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-[#c4ff0d] mb-1"></div>
                   <div className="text-xs lg:text-sm text-gray-500">Anonymous Users</div>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-center text-[#c4ff0d] mb-1"> 2M+</div>
+                  <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-center text-[#c4ff0d] mb-1"></div>
                   <div className="text-xs lg:text-sm text-gray-500">Transactions Completed</div>
                 </div>
               </div>

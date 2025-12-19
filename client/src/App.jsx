@@ -203,19 +203,16 @@ function AppContent() {
                   {!isAuthenticated ? (
                     <>
                       <button
-                        onClick={() => {
-                          if (window.location.pathname !== '/') {
-                            navigate('/');
-                            setTimeout(() => {
-                              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-                            }, 100);
-                          } else {
-                            document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-                          }
-                        }}
+                        onClick={() => navigate('/marketplace')}
                         className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
                       >
-                        Features
+                        Marketplace
+                      </button>
+                      <button
+                        onClick={() => navigate('/reels')}
+                        className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
+                      >
+                        Reels
                       </button>
                       <button
                         onClick={() => {
@@ -231,12 +228,6 @@ function AppContent() {
                         className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
                       >
                         How It Works
-                      </button>
-                      <button
-                        onClick={() => navigate('/marketplace')}
-                        className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition hover:bg-[#1a1a1a]"
-                      >
-                        Marketplace
                       </button>
                       <button
                         onClick={() => navigate('/contact')}
@@ -512,15 +503,7 @@ function AppContent() {
                     </>
                   ) : (
                     <>
-                      <button onClick={() => { 
-                        setMobileNavOpen(false);
-                        if (window.location.pathname !== '/') {
-                          navigate('/');
-                          setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 100);
-                        } else {
-                          document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Features</button>
+                      <button onClick={() => { navigate('/reels'); setMobileNavOpen(false); }} className="w-full text-left text-gray-300 hover:text-white px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition">Reels</button>
                       <button onClick={() => { 
                         setMobileNavOpen(false);
                         if (window.location.pathname !== '/') {

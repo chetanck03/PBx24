@@ -98,11 +98,38 @@ function parseUserIntent(message) {
     intent = 'phone_features';
   }
 
-  // Extract brand entities
-  const brands = ['iphone', 'apple', 'samsung', 'oneplus', 'xiaomi', 'redmi', 'poco', 'realme', 'oppo', 'vivo', 'google', 'pixel', 'nothing', 'motorola', 'nokia'];
-  for (const brand of brands) {
-    if (lowerMsg.includes(brand)) {
-      entities.brand = brand === 'apple' ? 'iphone' : brand;
+  // Extract brand entities - comprehensive list
+  const brandMappings = {
+    'iphone': 'Apple', 'apple': 'Apple',
+    'samsung': 'Samsung', 'galaxy': 'Samsung',
+    'oneplus': 'OnePlus', 'one plus': 'OnePlus',
+    'xiaomi': 'Xiaomi', 'mi': 'Xiaomi',
+    'redmi': 'Redmi',
+    'poco': 'Poco',
+    'realme': 'Realme',
+    'oppo': 'Oppo',
+    'vivo': 'Vivo',
+    'google': 'Google', 'pixel': 'Google',
+    'nothing': 'Nothing',
+    'motorola': 'Motorola', 'moto': 'Motorola',
+    'nokia': 'Nokia',
+    'huawei': 'Huawei',
+    'honor': 'Honor',
+    'asus': 'Asus', 'rog': 'Asus',
+    'lenovo': 'Lenovo',
+    'sony': 'Sony', 'xperia': 'Sony',
+    'lg': 'LG',
+    'htc': 'HTC',
+    'iqoo': 'iQOO',
+    'tecno': 'Tecno',
+    'infinix': 'Infinix',
+    'lava': 'Lava',
+    'micromax': 'Micromax'
+  };
+  
+  for (const [keyword, brandName] of Object.entries(brandMappings)) {
+    if (lowerMsg.includes(keyword)) {
+      entities.brand = brandName.toLowerCase();
       break;
     }
   }
@@ -171,9 +198,29 @@ function filterPhones(phones, entities) {
 }
 
 // Format phone list for response
-function formatPhoneList(phones, limit = 5) {
+function formatPhoneList(phones, limit = 5, searchedBrand = null, allPhones = []) {
   if (phones.length === 0) {
-    return "No phones found matching your criteria.";
+    // Get available brands for suggestion
+    const availableBrands = [...new Set(allPhones.map(p => p.brand))].filter(Boolean);
+    
+    if (searchedBrand) {
+      const brandName = searchedBrand.charAt(0).toUpperCase() + searchedBrand.slice(1);
+      let response = `Sorry, we don't have any ${brandName} phones available right now.\n\n`;
+      response += `📢 But don't worry! New phones are listed daily.\n\n`;
+      
+      if (availableBrands.length > 0) {
+        response += `Currently available brands:\n`;
+        availableBrands.slice(0, 6).forEach(brand => {
+          response += `• ${brand}\n`;
+        });
+        response += `\nWould you like to see phones from any of these brands?`;
+      } else {
+        response += `Check back soon or browse the Marketplace for the latest listings!`;
+      }
+      return response;
+    }
+    
+    return "No phones found matching your criteria. Try adjusting your filters or check the Marketplace for all available phones!";
   }
 
   const displayPhones = phones.slice(0, limit);
@@ -185,7 +232,7 @@ function formatPhoneList(phones, limit = 5) {
     if (phone.ram) response += ` | RAM: ${phone.ram}`;
     response += `\n`;
     response += `   Condition: ${phone.condition || 'N/A'}\n`;
-    response += `   Min Bid: Rs.${(phone.minBidPrice || 0).toLocaleString()}\n`;
+    response += `   Min Bid: ₹${(phone.minBidPrice || 0).toLocaleString()}\n`;
     response += `   Location: ${phone.location || 'N/A'}\n`;
     if (phone.accessories) {
       const acc = [];
@@ -219,14 +266,17 @@ async function generateResponse(intent, entities, phones, stats) {
     case 'list_phones':
     case 'phone_features':
       const filteredPhones = filterPhones(phones, entities);
-      return formatPhoneList(filteredPhones);
+      return formatPhoneList(filteredPhones, 5, entities.brand, phones);
 
     case 'price_query':
       const priceFiltered = filterPhones(phones, entities);
       if (priceFiltered.length === 0) {
-        return `No phones found in that price range. Our current price range is Rs.${stats.priceRange.minPrice?.toLocaleString() || 0} - Rs.${stats.priceRange.maxPrice?.toLocaleString() || 0}.\n\nTry adjusting your budget or check out all available phones!`;
+        let priceResponse = `No phones found in that price range.\n\n`;
+        priceResponse += `📊 Our current price range: ₹${stats.priceRange.minPrice?.toLocaleString() || 0} - ₹${stats.priceRange.maxPrice?.toLocaleString() || 0}\n\n`;
+        priceResponse += `Try adjusting your budget or check out all available phones in the Marketplace!`;
+        return priceResponse;
       }
-      return formatPhoneList(priceFiltered);
+      return formatPhoneList(priceFiltered, 5, entities.brand, phones);
 
     case 'how_auction':
       return `How Auctions Work on PhoneBid:\n\n1. Browse - Find phones you like in the Marketplace\n\n2. Place Bid - Enter your bid amount (must be higher than current bid)\n\n3. Watch - Monitor the auction until it ends\n\n4. Win - If you're the highest bidder when time runs out, you win!\n\n5. Complete - Arrange payment and pickup with the seller\n\nTips:\n- Set a maximum budget before bidding\n- Watch the auction end time\n- Higher bids have better chances\n\nCurrently ${stats.activeAuctions} active auctions!`;
@@ -240,11 +290,17 @@ async function generateResponse(intent, entities, phones, stats) {
     default:
       // Try to find relevant phones based on any keywords
       const defaultFiltered = filterPhones(phones, entities);
-      if (defaultFiltered.length > 0 && defaultFiltered.length < phones.length) {
-        return formatPhoneList(defaultFiltered);
+      
+      // If user asked about a specific brand but none found
+      if (entities.brand && defaultFiltered.length === 0) {
+        return formatPhoneList(defaultFiltered, 5, entities.brand, phones);
       }
       
-      return `I'm here to help!\n\nQuick Stats:\n- Total Phones: ${stats.totalPhones}\n- Live Auctions: ${stats.activeAuctions}\n- Brands: ${stats.brands.slice(0, 5).join(', ') || 'Various'}\n- Price Range: Rs.${stats.priceRange.minPrice?.toLocaleString() || 0} - Rs.${stats.priceRange.maxPrice?.toLocaleString() || 0}\n\nTry asking:\n- "Show me all phones"\n- "iPhones under 30000"\n- "How do auctions work?"\n- "How to sell my phone?"`;
+      if (defaultFiltered.length > 0 && defaultFiltered.length < phones.length) {
+        return formatPhoneList(defaultFiltered, 5, entities.brand, phones);
+      }
+      
+      return `I'm here to help!\n\nQuick Stats:\n- Total Phones: ${stats.totalPhones}\n- Live Auctions: ${stats.activeAuctions}\n- Brands: ${stats.brands.slice(0, 5).join(', ') || 'Various'}\n- Price Range: ₹${stats.priceRange.minPrice?.toLocaleString() || 0} - ₹${stats.priceRange.maxPrice?.toLocaleString() || 0}\n\nTry asking:\n- "Show me all phones"\n- "iPhones under 30000"\n- "How do auctions work?"\n- "How to sell my phone?"`;
   }
 }
 

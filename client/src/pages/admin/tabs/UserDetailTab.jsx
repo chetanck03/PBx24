@@ -1,8 +1,49 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Video, Play, Trash2, Eye, UserCheck } from 'lucide-react';
+import { ChevronRight, Video, Play, Trash2, Eye, UserCheck, X, ZoomIn, ExternalLink } from 'lucide-react';
+
+// Full-screen Image Viewer Modal
+const ImageViewerModal = ({ imageUrl, onClose }) => {
+  if (!imageUrl) return null;
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
+      >
+        <X className="w-6 h-6 text-white" />
+      </button>
+      
+      {/* Open in new tab button */}
+      <a 
+        href={imageUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-4 right-16 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
+      >
+        <ExternalLink className="w-6 h-6 text-white" />
+      </a>
+      
+      {/* Image */}
+      <img 
+        src={imageUrl} 
+        alt="Government ID Full View" 
+        className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+};
 
 const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDeleteUser }) => {
   const navigate = useNavigate();
+  const [showImageViewer, setShowImageViewer] = useState(false);
   
   if (!user) return null;
   
@@ -86,15 +127,27 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
         {user.governmentIdProof && (
           <div className="mt-4">
             <p className="text-gray-500 text-xs mb-2">Government ID Document</p>
-            <div className="bg-[#1a1a1a] rounded-xl p-2 inline-block">
+            <div 
+              className="bg-[#1a1a1a] rounded-xl p-3 inline-block cursor-pointer hover:bg-[#252525] transition group relative"
+              onClick={() => setShowImageViewer(true)}
+            >
               <img 
                 src={user.governmentIdProof} 
                 alt="Government ID" 
-                className="max-w-full max-h-64 rounded-lg object-contain cursor-pointer hover:opacity-80 transition"
-                onClick={() => window.open(user.governmentIdProof, '_blank')}
+                className="max-w-full max-h-80 rounded-lg object-contain"
               />
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded-xl">
+                <div className="flex items-center gap-2 bg-[#c4ff0d] text-black px-4 py-2 rounded-lg font-medium">
+                  <ZoomIn className="w-5 h-5" />
+                  View Full Size
+                </div>
+              </div>
             </div>
-            <p className="text-gray-500 text-xs mt-2">Click image to view full size</p>
+            <p className="text-[#c4ff0d] text-xs mt-2 flex items-center gap-1">
+              <ZoomIn className="w-3 h-3" />
+              Click image to view full size
+            </p>
           </div>
         )}
         {!user.governmentIdProof && (
@@ -176,6 +229,14 @@ const UserDetailTab = ({ user, phones, bids, reels, onBack, onDeleteReel, onDele
           </div>
         )}
       </div>
+
+      {/* Image Viewer Modal */}
+      {showImageViewer && (
+        <ImageViewerModal 
+          imageUrl={user.governmentIdProof} 
+          onClose={() => setShowImageViewer(false)} 
+        />
+      )}
     </div>
   );
 };
