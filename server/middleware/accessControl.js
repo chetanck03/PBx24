@@ -63,8 +63,12 @@ export const requireAuth = async (req, res, next) => {
     req.user = user;
     req.userId = user._id.toString();
     req.userRole = user.role;
+    
+    console.log('[AUTH] User authenticated:', user._id, 'kycStatus:', user.kycStatus);
+    
     next();
   } catch (error) {
+    console.error('[AUTH] Authentication error:', error.message);
     return res.status(401).json({
       success: false,
       error: {
@@ -106,6 +110,74 @@ export const requireSeller = (req, res, next) => {
     });
   }
   // All authenticated users can create listings
+  next();
+};
+
+/**
+ * Middleware to require KYC verification
+ * User must be verified by admin before they can place bids or sell phones
+ */
+export const requireKYCVerified = async (req, res, next) => {
+  if (!req.user) {
+    console.log('[KYC] No user in request');
+    return res.status(401).json({
+      success: false,
+      error: {
+        message: 'Authentication required',
+        code: 'AUTH_REQUIRED'
+      }
+    });
+  }
+
+  console.log('[KYC] Checking KYC for user:', req.user._id, 'current kycStatus:', req.user.kycStatus);
+
+  // Admin users bypass KYC check
+  if (req.user.role === 'admin') {
+    console.log('[KYC] Admin user - bypassing KYC check');
+    return next();
+  }
+
+  // IMPORTANT: Fetch fresh user data from database to get latest kycStatus
+  // This ensures we don't use stale data from the token/session
+  try {
+    const freshUser = await User.findById(req.user._id).select('kycStatus role email');
+    if (freshUser) {
+      req.user.kycStatus = freshUser.kycStatus;
+      console.log('[KYC] Fresh kycStatus fetched for user', req.user._id, '(', freshUser.email, '):', freshUser.kycStatus);
+    } else {
+      console.error('[KYC] User not found in database:', req.user._id);
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[KYC] Error fetching fresh user data:', err.message);
+    // Continue with existing kycStatus if fetch fails
+  }
+
+  // Check if user's KYC is verified
+  if (req.user.kycStatus !== 'verified') {
+    console.log('[KYC] ❌ User BLOCKED - kycStatus:', req.user.kycStatus, 'userId:', req.user._id);
+    const statusMessages = {
+      'pending': 'Your account is under verification. Please wait for admin approval before placing bids.',
+      'rejected': 'Your KYC verification was rejected. Please contact support or re-submit your documents.'
+    };
+
+    return res.status(403).json({
+      success: false,
+      error: {
+        message: statusMessages[req.user.kycStatus] || 'KYC verification required to place bids',
+        code: 'KYC_NOT_VERIFIED',
+        kycStatus: req.user.kycStatus
+      }
+    });
+  }
+
+  console.log('[KYC] ✅ User ALLOWED - kycStatus: verified, userId:', req.user._id);
   next();
 };
 
@@ -223,6 +295,7 @@ export default {
   requireAuth,
   requireAdmin,
   requireSeller,
+  requireKYCVerified,
   filterSensitiveData,
   filterResponse,
   isOwner,

@@ -17,6 +17,8 @@ export const getAllUsers = async (req, res) => {
     if (role) filter.role = role;
     if (kycStatus) filter.kycStatus = kycStatus;
     
+    console.log('[ADMIN] getAllUsers called with filter:', filter, 'page:', page, 'limit:', limit);
+    
     // Use Promise.all for parallel execution
     const [users, total] = await Promise.all([
       User.find(filter)
@@ -27,11 +29,14 @@ export const getAllUsers = async (req, res) => {
       User.countDocuments(filter)
     ]);
     
+    console.log('[ADMIN] Found', users.length, 'users out of', total, 'total');
+    
     // Fast mapping with error handling
     const usersData = users.map(user => {
       try {
         return user.toFullObject();
-      } catch {
+      } catch (err) {
+        console.error('[ADMIN] Error in toFullObject for user:', user._id, err.message);
         return {
           _id: user._id,
           email: user.email,
@@ -48,15 +53,18 @@ export const getAllUsers = async (req, res) => {
       }
     });
     
+    console.log('[ADMIN] Returning', usersData.length, 'users');
+    
     res.json({
       success: true,
       data: usersData,
       pagination: { current: parseInt(page), pages: Math.ceil(total / limit), total }
     });
   } catch (error) {
+    console.error('[ADMIN] getAllUsers error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Error fetching users', code: 'FETCH_ERROR' }
+      error: { message: 'Error fetching users', code: 'FETCH_ERROR', details: error.message }
     });
   }
 };
@@ -102,7 +110,10 @@ export const reviewKYC = async (req, res) => {
     const { userId } = req.params;
     const { kycStatus, notes } = req.body;
     
+    console.log('[ADMIN] reviewKYC called - userId:', userId, 'kycStatus:', kycStatus);
+    
     if (!['verified', 'rejected'].includes(kycStatus)) {
+      console.log('[ADMIN] Invalid KYC status:', kycStatus);
       return res.status(400).json({
         success: false,
         error: {
@@ -115,6 +126,7 @@ export const reviewKYC = async (req, res) => {
     const user = await User.findById(userId);
     
     if (!user) {
+      console.log('[ADMIN] User not found:', userId);
       return res.status(404).json({
         success: false,
         error: {
@@ -124,8 +136,12 @@ export const reviewKYC = async (req, res) => {
       });
     }
     
+    console.log('[ADMIN] User found:', user.email, 'current kycStatus:', user.kycStatus);
+    
     user.kycStatus = kycStatus;
     await user.save();
+    
+    console.log('[ADMIN] KYC updated successfully - new kycStatus:', user.kycStatus);
     
     res.json({
       success: true,
@@ -133,6 +149,7 @@ export const reviewKYC = async (req, res) => {
       message: `KYC ${kycStatus} successfully`
     });
   } catch (error) {
+    console.error('[ADMIN] reviewKYC error:', error);
     res.status(500).json({
       success: false,
       error: {

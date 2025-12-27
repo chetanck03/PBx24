@@ -150,6 +150,26 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  // Refresh user data from server (useful after admin approves KYC)
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await api.get(config.endpoints.auth.me);
+      if (response.data.success) {
+        const freshUser = response.data.data.user;
+        setUser(freshUser);
+        localStorage.setItem('user', JSON.stringify(freshUser));
+        console.log('[AUTH] User data refreshed, kycStatus:', freshUser.kycStatus);
+        return freshUser;
+      }
+    } catch (error) {
+      console.error('[AUTH] Failed to refresh user:', error);
+    }
+    return null;
+  };
+
   const value = {
     user,
     loading,
@@ -158,6 +178,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     checkAuth,
+    refreshUser,
     isAuthenticated: !!user
   };
 

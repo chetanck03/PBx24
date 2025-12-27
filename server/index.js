@@ -163,6 +163,18 @@ io.on('connection', (socket) => {
     console.log(`Admin ${socket.id} left admin_complaints room`);
   });
 
+  // Generic join room handler (for admin_users and other rooms)
+  socket.on('join_room', (roomName) => {
+    socket.join(roomName);
+    console.log(`Socket ${socket.id} joined room: ${roomName}`);
+  });
+
+  // Generic leave room handler
+  socket.on('leave_room', (roomName) => {
+    socket.leave(roomName);
+    console.log(`Socket ${socket.id} left room: ${roomName}`);
+  });
+
   // Join phone room for real-time bid updates
   socket.on('join_phone', (phoneId) => {
     socket.join(`phone_${phoneId}`);

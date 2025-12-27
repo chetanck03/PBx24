@@ -2,9 +2,16 @@ import { Eye, Check, X, Trash2, Crown } from 'lucide-react';
 
 const UsersTab = ({ users, onView, onKYC, onDelete, onUpdateRole, StatusBadge }) => (
   <div className="space-y-4">
+    {/* Empty state */}
+    {(!users || users.length === 0) && (
+      <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-2xl p-8 text-center">
+        <p className="text-gray-400">No users found</p>
+      </div>
+    )}
+    
     {/* Mobile Cards */}
     <div className="lg:hidden space-y-3">
-      {users.map((user) => (
+      {users?.map((user) => (
         <div key={user._id} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-[#c4ff0d] to-[#a8d60d] rounded-full flex items-center justify-center text-black font-bold flex-shrink-0">
@@ -52,7 +59,7 @@ const UsersTab = ({ users, onView, onKYC, onDelete, onUpdateRole, StatusBadge })
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1a1a1a]">
-            {users.map((user) => (
+            {users?.map((user) => (
               <tr key={user._id} className="hover:bg-[#1a1a1a]/50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">

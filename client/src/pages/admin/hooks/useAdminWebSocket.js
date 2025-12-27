@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import socketService from '../../../services/socketService';
 import toast from 'react-hot-toast';
 
-export const useAdminWebSocket = (setComplaints, setNewComplaintsCount) => {
+export const useAdminWebSocket = (setComplaints, setNewComplaintsCount, setUsers) => {
   const [socketConnected, setSocketConnected] = useState(false);
 
   useEffect(() => {
@@ -23,6 +23,21 @@ export const useAdminWebSocket = (setComplaints, setNewComplaintsCount) => {
       });
     };
 
+    const handleNewUser = (data) => {
+      console.log('[ADMIN] New user registered via WebSocket:', data.user);
+      if (setUsers) {
+        setUsers(prev => {
+          const exists = prev.some(u => u._id === data.user._id);
+          if (exists) return prev;
+          return [data.user, ...prev];
+        });
+        toast.success(`New user registered: ${data.user.name}`, {
+          icon: '👤',
+          duration: 5000
+        });
+      }
+    };
+
     const handleComplaintStatusChanged = (data) => {
       console.log('Complaint status changed:', data);
       setComplaints(prev => 
@@ -31,9 +46,14 @@ export const useAdminWebSocket = (setComplaints, setNewComplaintsCount) => {
     };
 
     const handleConnect = () => {
-      console.log('Admin socket connected, joining admin_complaints room');
+      console.log('Admin socket connected, joining admin rooms');
       setSocketConnected(true);
       socketService.joinAdminComplaints();
+      // Join admin users room for real-time user updates
+      if (socket) {
+        socket.emit('join_room', 'admin_users');
+        console.log('Joined admin_users room');
+      }
     };
 
     const handleDisconnect = () => {
@@ -43,14 +63,16 @@ export const useAdminWebSocket = (setComplaints, setNewComplaintsCount) => {
     
     if (socket) {
       if (socket.connected) {
-        console.log('Socket already connected, joining admin_complaints room');
+        console.log('Socket already connected, joining admin rooms');
         setSocketConnected(true);
         socketService.joinAdminComplaints();
+        socket.emit('join_room', 'admin_users');
       }
       
       socket.on('connect', handleConnect);
       socket.on('disconnect', handleDisconnect);
       socket.on('new_complaint', handleNewComplaint);
+      socket.on('new_user', handleNewUser);
       socket.on('complaint_status_changed', handleComplaintStatusChanged);
     }
 
@@ -61,10 +83,12 @@ export const useAdminWebSocket = (setComplaints, setNewComplaintsCount) => {
         socket.off('connect', handleConnect);
         socket.off('disconnect', handleDisconnect);
         socket.off('new_complaint', handleNewComplaint);
+        socket.off('new_user', handleNewUser);
         socket.off('complaint_status_changed', handleComplaintStatusChanged);
+        socket.emit('leave_room', 'admin_users');
       }
     };
-  }, [setComplaints, setNewComplaintsCount]);
+  }, [setComplaints, setNewComplaintsCount, setUsers]);
 
   return { socketConnected };
 };

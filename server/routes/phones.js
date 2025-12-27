@@ -11,7 +11,7 @@ import {
   deletePhone,
   getMarketplacePhones
 } from '../controllers/phoneController.js';
-import { requireAuth, requireAdmin, requireSeller } from '../middleware/accessControl.js';
+import { requireAuth, requireAdmin, requireSeller, requireKYCVerified } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
@@ -20,15 +20,16 @@ router.get('/marketplace', getMarketplacePhones);
 router.get('/', getAllPhones);
 
 // Seller routes (must be before /:id to avoid conflicts)
-router.post('/', requireAuth, requireSeller, createPhone);
+// KYC REQUIRED for creating, updating, and deleting listings
+router.post('/', requireAuth, requireSeller, requireKYCVerified, createPhone);
 router.get('/seller/my-phones', requireAuth, requireSeller, getSellerPhones);
 router.get('/seller/sold', requireAuth, getSoldPhones);
 router.get('/user/purchased', requireAuth, getPurchasedPhones);
 
-// Dynamic routes
+// Dynamic routes - KYC required for modifying listings
 router.get('/:id', getPhoneById);
-router.put('/:id', requireAuth, updatePhone);
-router.delete('/:id', requireAuth, deletePhone);
+router.put('/:id', requireAuth, requireKYCVerified, updatePhone);
+router.delete('/:id', requireAuth, requireKYCVerified, deletePhone);
 
 // Admin routes
 router.put('/:id/verify', requireAuth, requireAdmin, verifyPhone);

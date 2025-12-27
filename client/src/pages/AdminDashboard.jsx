@@ -55,6 +55,7 @@ const AdminDashboard = () => {
     lastUpdated,
     refreshIntervalRef,
     setComplaints,
+    setUsers,
     setSelectedUser,
     setAutoRefresh,
     loadDashboardData,
@@ -71,7 +72,7 @@ const AdminDashboard = () => {
   } = useAdminDashboard();
 
   // WebSocket for real-time updates
-  const { socketConnected } = useAdminWebSocket(setComplaints, setNewComplaintsCount);
+  const { socketConnected } = useAdminWebSocket(setComplaints, setNewComplaintsCount, setUsers);
 
   // Sidebar navigation items
   const sidebarItems = useMemo(() => [

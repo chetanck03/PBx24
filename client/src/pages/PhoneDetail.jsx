@@ -10,7 +10,7 @@ import { ArrowLeft, HardDrive, Cpu, Palette, CheckCircle, MapPin, User, Clock, T
 const PhoneDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, refreshUser } = useAuth();
   const [phone, setPhone] = useState(null);
   const [auction, setAuction] = useState(null);
   const [bids, setBids] = useState([]);
@@ -29,6 +29,29 @@ const PhoneDetail = () => {
   useEffect(() => {
     loadPhoneDetails();
   }, [id]);
+
+  // Refresh user data when page loads if user is logged in but KYC not verified
+  // This ensures we get the latest KYC status from server (in case admin approved)
+  useEffect(() => {
+    if (isAuthenticated && user?.kycStatus !== 'verified') {
+      refreshUser();
+    }
+  }, [isAuthenticated]);
+
+  // Auto-refresh user KYC status every 30 seconds if pending (so user sees update when admin approves)
+  useEffect(() => {
+    if (!isAuthenticated || user?.kycStatus === 'verified') return;
+    
+    const interval = setInterval(() => {
+      refreshUser().then(freshUser => {
+        if (freshUser?.kycStatus === 'verified') {
+          toast.success('🎉 Your account has been verified! You can now place bids.');
+        }
+      });
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user?.kycStatus]);
 
   // WebSocket connection for real-time bid updates
   useEffect(() => {
@@ -572,53 +595,98 @@ const PhoneDetail = () => {
                 {!timeRemaining.ended && auction.status === 'active' && (
                   <>
                     {isAuthenticated ? (
-                      <form onSubmit={handlePlaceBid} className="space-y-4">
-                        <div className="flex gap-3">
-                          <div className="flex-1 relative">
-                            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">₹</span>
-                            <input
-                              type="number"
-                              value={bidAmount}
-                              onChange={(e) => {
-                                // Limit input to reasonable length (max 9 digits = up to 10 Crore)
-                                const value = e.target.value;
-                                if (value.length <= 9) {
-                                  setBidAmount(value);
-                                }
-                              }}
-                              min={(auction.currentBid || 0) + 1}
-                              max={MAX_BID_AMOUNT}
-                              placeholder={`Min: ₹${((auction.currentBid || 0) + 1).toLocaleString()}`}
-                              className="w-full pl-8 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#c4ff0d] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#c4ff0d] transition"
-                              required
-                            />
+                      <>
+                        {/* KYC Verification Check */}
+                        {user?.kycStatus !== 'verified' ? (
+                          <div className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl">
+                            <div className="flex items-start gap-3">
+                              <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-yellow-400 font-semibold mb-1">
+                                  {user?.kycStatus === 'pending' ? 'Account Under Verification' : 'KYC Verification Required'}
+                                </p>
+                                <p className="text-gray-400 text-sm mb-3">
+                                  {user?.kycStatus === 'pending' 
+                                    ? 'Your account is being reviewed by our admin team. You will be able to place bids once your KYC is approved.'
+                                    : user?.kycStatus === 'rejected'
+                                    ? 'Your KYC verification was rejected. Please contact support or re-submit your documents.'
+                                    : 'Please complete your KYC verification to place bids.'}
+                                </p>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    user?.kycStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    user?.kycStatus === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                  }`}>
+                                    KYC Status: {user?.kycStatus?.toUpperCase() || 'NOT SUBMITTED'}
+                                  </span>
+                                  <button
+                                    onClick={async () => {
+                                      const freshUser = await refreshUser();
+                                      if (freshUser?.kycStatus === 'verified') {
+                                        toast.success('Your account has been verified! You can now place bids.');
+                                      } else {
+                                        toast('Status checked - still ' + (freshUser?.kycStatus || 'pending'), { icon: 'ℹ️' });
+                                      }
+                                    }}
+                                    className="px-3 py-1 bg-[#c4ff0d]/20 text-[#c4ff0d] rounded-full text-xs font-medium hover:bg-[#c4ff0d]/30 transition"
+                                  >
+                                    Refresh Status
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <button
-                            type="submit"
-                            disabled={submitting}
-                            className="px-8 py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {submitting ? 'Placing...' : 'Place Bid'}
-                          </button>
-                        </div>
-                        
-                        {/* Bid limits info */}
-                        <p className="text-xs text-gray-500">
-                          Max bid: ₹{MAX_BID_AMOUNT.toLocaleString()} • Bid must be higher than current
-                        </p>
+                        ) : (
+                          <form onSubmit={handlePlaceBid} className="space-y-4">
+                            <div className="flex gap-3">
+                              <div className="flex-1 relative">
+                                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">₹</span>
+                                <input
+                                  type="number"
+                                  value={bidAmount}
+                                  onChange={(e) => {
+                                    // Limit input to reasonable length (max 9 digits = up to 10 Crore)
+                                    const value = e.target.value;
+                                    if (value.length <= 9) {
+                                      setBidAmount(value);
+                                    }
+                                  }}
+                                  min={(auction.currentBid || 0) + 1}
+                                  max={MAX_BID_AMOUNT}
+                                  placeholder={`Min: ₹${((auction.currentBid || 0) + 1).toLocaleString()}`}
+                                  className="w-full pl-8 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#c4ff0d] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#c4ff0d] transition"
+                                  required
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={submitting}
+                                className="px-8 py-3 bg-[#c4ff0d] text-black rounded-xl font-bold hover:bg-[#d4ff3d] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {submitting ? 'Placing...' : 'Place Bid'}
+                              </button>
+                            </div>
+                            
+                            {/* Bid limits info */}
+                            <p className="text-xs text-gray-500">
+                              Max bid: ₹{MAX_BID_AMOUNT.toLocaleString()} • Bid must be higher than current
+                            </p>
 
-                        {error && (
-                          <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
-                            <p className="text-sm text-red-400">{error}</p>
-                          </div>
-                        )}
+                            {error && (
+                              <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-xl">
+                                <p className="text-sm text-red-400">{error}</p>
+                              </div>
+                            )}
 
-                        {success && (
-                          <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-xl">
-                            <p className="text-sm text-green-400">{success}</p>
-                          </div>
+                            {success && (
+                              <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-xl">
+                                <p className="text-sm text-green-400">{success}</p>
+                              </div>
+                            )}
+                          </form>
                         )}
-                      </form>
+                      </>
                     ) : (
                       <div className="space-y-4">
                         <div className="p-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-center">

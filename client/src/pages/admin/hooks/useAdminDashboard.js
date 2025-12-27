@@ -29,6 +29,8 @@ export const useAdminDashboard = () => {
     try {
       if (!silent) setLoading(true);
       
+      console.log('[ADMIN] Loading dashboard data...');
+      
       // Use Promise.allSettled for parallel loading with graceful error handling
       const results = await Promise.allSettled([
         adminAPI.getPlatformStatistics(),
@@ -42,15 +44,22 @@ export const useAdminDashboard = () => {
       if (statsResult.status === 'fulfilled') {
         setStats(statsResult.value.data.data || defaultStats);
       } else {
+        console.error('[ADMIN] Stats fetch failed:', statsResult.reason);
         setStats(prev => prev || defaultStats);
       }
 
       if (usersResult.status === 'fulfilled') {
-        setUsers(usersResult.value.data.data || []);
+        const userData = usersResult.value.data.data || [];
+        console.log('[ADMIN] Users loaded:', userData.length, 'users');
+        setUsers(userData);
+      } else {
+        console.error('[ADMIN] Users fetch failed:', usersResult.reason);
       }
 
       if (phonesResult.status === 'fulfilled') {
         setPhones(phonesResult.value.data.data || []);
+      } else {
+        console.error('[ADMIN] Phones fetch failed:', phonesResult.reason);
       }
 
       setLastUpdated(new Date());
@@ -61,6 +70,7 @@ export const useAdminDashboard = () => {
         toast.error('Unable to connect to server');
       }
     } catch (error) {
+      console.error('[ADMIN] Dashboard load error:', error);
       if (!silent) toast.error('Failed to load dashboard data');
       setStats(prev => prev || defaultStats);
     } finally {
@@ -108,10 +118,13 @@ export const useAdminDashboard = () => {
 
   const handleReviewKYC = useCallback(async (userId, status) => {
     try {
-      await adminAPI.reviewKYC(userId, status);
+      const response = await adminAPI.reviewKYC(userId, status);
+      console.log('[ADMIN] KYC review response:', response.data);
       setUsers(prev => prev.map(u => u._id === userId ? { ...u, kycStatus: status } : u));
+      toast.success(`User KYC ${status === 'verified' ? 'approved' : 'rejected'} successfully!`);
     } catch (error) { 
-      console.error('Error reviewing KYC:', error); 
+      console.error('Error reviewing KYC:', error);
+      toast.error('Failed to update KYC status');
     }
   }, []);
 
@@ -212,6 +225,7 @@ export const useAdminDashboard = () => {
     refreshIntervalRef,
     // Setters
     setComplaints,
+    setUsers,
     setSelectedUser,
     setAutoRefresh,
     // Actions

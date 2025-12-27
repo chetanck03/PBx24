@@ -1,12 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { phoneAPI } from '../services/api';
-
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import Logo from '../components/common/Logo';
+import { AlertTriangle } from 'lucide-react';
 
 const CreatePhoneListing = () => {
   const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
+
+  // Refresh user data when page loads if KYC not verified
+  // This ensures we get the latest KYC status from server (in case admin approved)
+  useEffect(() => {
+    if (user?.kycStatus !== 'verified') {
+      refreshUser();
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     brand: '',
@@ -223,6 +233,9 @@ const CreatePhoneListing = () => {
 
   const uploadedCount = images.filter(img => img).length;
 
+  // Check if user's KYC is not verified
+  const isKYCPending = user?.kycStatus !== 'verified';
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-4 lg:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -244,7 +257,58 @@ const CreatePhoneListing = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {/* KYC Verification Warning */}
+        {isKYCPending && (
+          <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-yellow-400 font-semibold mb-1">
+                  {user?.kycStatus === 'pending' ? 'Account Under Verification' : 'KYC Verification Required'}
+                </p>
+                <p className="text-gray-400 text-sm mb-3">
+                  {user?.kycStatus === 'pending' 
+                    ? 'Your account is being reviewed by our admin team. You will be able to create listings once your KYC is approved.'
+                    : user?.kycStatus === 'rejected'
+                    ? 'Your KYC verification was rejected. Please contact support or re-submit your documents.'
+                    : 'Please complete your KYC verification to create phone listings.'}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    user?.kycStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                    user?.kycStatus === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    KYC Status: {user?.kycStatus?.toUpperCase() || 'NOT SUBMITTED'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const freshUser = await refreshUser();
+                      if (freshUser?.kycStatus === 'verified') {
+                        toast.success('Your account has been verified! You can now create listings.');
+                      } else {
+                        toast('Status checked - still ' + (freshUser?.kycStatus || 'pending'), { icon: 'ℹ️' });
+                      }
+                    }}
+                    className="px-3 py-1 bg-[#c4ff0d]/20 text-[#c4ff0d] rounded-full text-xs font-medium hover:bg-[#c4ff0d]/30 transition"
+                  >
+                    Refresh Status
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="mt-3 text-[#c4ff0d] text-sm hover:underline"
+                >
+                  Go to Dashboard →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className={isKYCPending ? 'opacity-50 pointer-events-none' : ''}>
           <div className="space-y-6">
             {/* Section 1: Device Details */}
             <div className="bg-[#0f0f0f] border-2 border-[#c4ff0d] rounded-xl lg:rounded-2xl p-4 lg:p-6">

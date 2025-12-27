@@ -151,6 +151,24 @@ export const verifySignupOTP = async (req, res) => {
     });
     
     await user.save();
+    console.log('[AUTH] New user created:', user._id, user.email, 'anonymousId:', user.anonymousId);
+    
+    // Emit WebSocket event to admin dashboard for real-time user list update
+    const io = req.app?.get('io');
+    if (io) {
+      io.to('admin_users').emit('new_user', {
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          kycStatus: user.kycStatus,
+          role: user.role,
+          anonymousId: user.anonymousId,
+          createdAt: user.createdAt
+        }
+      });
+      console.log('[AUTH] New user event emitted to admin dashboard');
+    }
     
     // Mark OTP as verified
     otpDoc.verified = true;

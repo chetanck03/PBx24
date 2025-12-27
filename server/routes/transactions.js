@@ -8,7 +8,7 @@ import {
   completeSellerAppointment,
   completeBuyerAppointment
 } from '../controllers/transactionController.js';
-import { requireAuth, requireAdmin } from '../middleware/accessControl.js';
+import { requireAuth, requireAdmin, requireKYCVerified } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
@@ -17,10 +17,10 @@ router.post('/', requireAuth, requireAdmin, createTransaction);
 router.get('/', requireAuth, getUserTransactions);
 router.get('/:id', requireAuth, getTransactionById);
 
-// Appointment routes
-router.post('/:id/seller-appointment/confirm', requireAuth, confirmSellerAppointment);
-router.post('/:id/buyer-appointment/confirm', requireAuth, confirmBuyerAppointment);
-router.post('/:id/seller-appointment/complete', requireAuth, completeSellerAppointment);
-router.post('/:id/buyer-appointment/complete', requireAuth, completeBuyerAppointment);
+// Appointment routes - KYC required for transaction actions
+router.post('/:id/seller-appointment/confirm', requireAuth, requireKYCVerified, confirmSellerAppointment);
+router.post('/:id/buyer-appointment/confirm', requireAuth, requireKYCVerified, confirmBuyerAppointment);
+router.post('/:id/seller-appointment/complete', requireAuth, requireKYCVerified, completeSellerAppointment);
+router.post('/:id/buyer-appointment/complete', requireAuth, requireKYCVerified, completeBuyerAppointment);
 
 export default router;

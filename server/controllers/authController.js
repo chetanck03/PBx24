@@ -117,7 +117,11 @@ export const getProfile = async (req, res) => {
           name: user.name,
           avatar: user.avatar,
           role: user.role,
-          anonymousId: user.anonymousId
+          anonymousId: user.anonymousId,
+          kycStatus: user.kycStatus,
+          walletBalance: user.walletBalance,
+          isActive: user.isActive,
+          createdAt: user.createdAt
         }
       }
     });

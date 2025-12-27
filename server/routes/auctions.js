@@ -7,7 +7,7 @@ import {
   endAuction,
   cancelAuction
 } from '../controllers/auctionController.js';
-import { requireAuth, requireAdmin } from '../middleware/accessControl.js';
+import { requireAuth, requireAdmin, requireKYCVerified } from '../middleware/accessControl.js';
 
 const router = express.Router();
 
@@ -16,9 +16,9 @@ router.get('/', getActiveAuctions);
 router.get('/:id', getAuctionById);
 router.get('/phone/:phoneId', getAuctionByPhoneId);
 
-// Authenticated routes
+// Authenticated routes - KYC required for seller actions
 router.post('/', requireAuth, requireAdmin, createAuction);
-router.put('/:id/end', requireAuth, endAuction);
-router.put('/:id/cancel', requireAuth, cancelAuction);
+router.put('/:id/end', requireAuth, requireKYCVerified, endAuction);
+router.put('/:id/cancel', requireAuth, requireKYCVerified, cancelAuction);
 
 export default router;
